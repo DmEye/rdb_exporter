@@ -12,6 +12,8 @@ This is a prometheus exporter for DBMS "Red Database".
   <tr><td>RedDatabase_mon_reads</td><td>The amount of read pages of database.</td></tr>
   <tr><td>RedDatabase_mon_writes</td><td>The amount of recorded pages of database.</td></tr>
   <tr><td>RedDatabase_mon_fetches</td><td>The amount of loaded in memory pages of database.</td></tr>
+  <tr><td>RedDatabase_mon_marks</td><td>The amount of marked in memory pages of database. These pages are "dirty" or are changed in memory but till have not written on disk</td></tr>
+  <tr><td>RedDatabase_used_memory</td><td>The amount of used memory bytes.</td></tr>
 </table>
 
 # Exporter configuration file
