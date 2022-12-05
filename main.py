@@ -1,6 +1,7 @@
 import os.path
 import subprocess
 import json
+import psutil
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
 from sys import platform
@@ -18,12 +19,13 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(self.scrape_transactions(CONFIGURE["utilities"]["gstat"], CONFIGURE["database"]).encode())
             self.wfile.write(self.scrape_active_users(CONFIGURE["utilities"]["isql"], CONFIGURE["database"], CONFIGURE["login"], CONFIGURE["password"]).encode())
             self.wfile.write(self.scrape_mon_io_stats(CONFIGURE["utilities"]["isql"], CONFIGURE["database"], CONFIGURE["login"], CONFIGURE["password"]).encode())
+            self.wfile.write(self.scrape_memory().encode())
         else:
             self.send_response(404)
 
     def scrape_db_size(self, path_to_database) -> str:
         db_size_in_bytes = 0
-        path_to_db = CONFIGURE["database"].split(':')[1]
+        path_to_db = path_to_database.split(':')[1]
         if os.path.exists(path_to_db):
             db_size_in_bytes = os.path.getsize(path_to_db)
         return "RedDatabase_db_size{} " + str(db_size_in_bytes) + "\n"
@@ -42,9 +44,8 @@ class Handler(BaseHTTPRequestHandler):
         difference_OLDT_NT = int(p["Next transaction"]) - int(p["Oldest transaction"])
         return "RedDatabase_diff_oldt_nt{} " + str(difference_OLDT_NT) + "\n"
 
-    def scrape_active_users(self, path_to_isql, path_to_database, login, password):
-        with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                              shell=True) as isql:
+    def scrape_active_users(self, path_to_isql, path_to_database, login, password) -> str:
+        with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True) as isql:
             out = isql.communicate(
                 f"CONNECT '{path_to_database}' USER '{login}' PASSWORD '{password}'; SHOW USERS; QUIT;".encode())
         out = out[0].decode("UTF-8")  # get the string
@@ -60,7 +61,7 @@ class Handler(BaseHTTPRequestHandler):
 
         return "RedDatabase_active_users{} " + str(amount_of_active_users) + "\n"
 
-    def scrape_mon_io_stats(self, path_to_isql, path_to_database, login, password):
+    def scrape_mon_io_stats(self, path_to_isql, path_to_database, login, password) -> str:
         with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                               shell=True) as isql:
             out = isql.communicate(
@@ -75,9 +76,14 @@ class Handler(BaseHTTPRequestHandler):
         READS = out[2]
         WRITES = out[3]
         FETCHES = out[4]
+        MARKS = out[5]
 
-        response = "RedDatabase_mon_reads{sss=\"io\"} " + READS + "\nRedDatabase_mon_writes{sss=\"io\"} " + WRITES + "\nRedDatabase_mon_fetches{sss=\"io\"} " + FETCHES + "\n"
+        response = "RedDatabase_mon_reads{} " + READS + "\nRedDatabase_mon_writes{} " + WRITES + "\nRedDatabase_mon_fetches{} " + FETCHES + "\nRedDatabase_mon_marks{} " + MARKS + "\n"
         return response
+
+    def scrape_memory(self) -> str:
+        memory = psutil.virtual_memory()
+        return "RedDatabase_used_memory{} " + str(memory.total - memory.available) + "\n"
 
 
 def run(server_class=HTTPServer, handler_class=Handler):
