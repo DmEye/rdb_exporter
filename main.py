@@ -15,13 +15,21 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
-            self.wfile.write(self.scrape_db_size(CONFIGURE["database"]).encode())
-            self.wfile.write(self.scrape_transactions(CONFIGURE["utilities"]["gstat"], CONFIGURE["database"]).encode())
-            self.wfile.write(self.scrape_active_users(CONFIGURE["utilities"]["isql"], CONFIGURE["database"], CONFIGURE["login"], CONFIGURE["password"]).encode())
-            self.wfile.write(self.scrape_mon_io_stats(CONFIGURE["utilities"]["isql"], CONFIGURE["database"], CONFIGURE["login"], CONFIGURE["password"]).encode())
-            self.wfile.write(self.scrape_memory().encode())
+            response = ""
+            for database in CONFIGURE["databases"]:
+                response += self.scrape(CONFIGURE["databases"][database])
+            self.wfile.write(response.encode())
         else:
             self.send_response(404)
+
+    def scrape(self, db_name) -> str:
+        response = ""
+        response += self.scrape_db_size(CONFIGURE["databases"][db_name]).replace("db_name", db_name)
+        response += self.scrape_transactions(CONFIGURE["utilities"]["gstat"], CONFIGURE["databases"][db_name]).replace("db_name", db_name)
+        response += self.scrape_active_users(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"],CONFIGURE["password"]).replace("db_name", db_name)
+        response += self.scrape_mon_io_stats(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"], CONFIGURE["password"]).replace("db_name", db_name)
+        response += self.scrape_memory().replace("db_name", db_name)
+        return response
 
     def scrape_db_size(self, path_to_database) -> str:
         db_size_in_bytes = 0
@@ -118,4 +126,3 @@ if __name__ == "__main__":
         }
 
     run()
-
