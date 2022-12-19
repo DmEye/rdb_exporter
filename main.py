@@ -106,7 +106,7 @@ def run(server_class=HTTPServer, handler_class=Handler):
 if __name__ == "__main__":
     # Parsing
     with open("./exporter_conf.json", "r") as file:
-        CONFIGURE = json.loads(file.readline().encode())
+        CONFIGURE = json.loads("".join(list(map(lambda line: line.replace("\n", ""), file.readlines()))))
 
     # Editing
     utilities_path = CONFIGURE["utilities"]
