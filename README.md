@@ -5,15 +5,13 @@ This is a prometheus exporter for DBMS "Red Database".
   <tr>
     <th>Name</th>
     <th>Description</th>
+    <th>Labels</th>
   </tr>
-  <tr><td>RedDatabase_db_size</td><td>The amount of database bytes which are taken to store data.</td></tr>
-  <tr><td>RedDatabase_diff_oldt_nt</td><td>The difference between Oldest transaction number and Next transaction number.</td></tr>
-  <tr><td>RedDatabase_active_users</td><td>The amount of active users in a database. (Note: you need to have an administrator rights to extract this metric)</td></tr>
-  <tr><td>RedDatabase_mon_reads</td><td>The amount of read pages of database.</td></tr>
-  <tr><td>RedDatabase_mon_writes</td><td>The amount of recorded pages of database.</td></tr>
-  <tr><td>RedDatabase_mon_fetches</td><td>The amount of loaded in memory pages of database.</td></tr>
-  <tr><td>RedDatabase_mon_marks</td><td>The amount of marked in memory pages of database. These pages are "dirty" or are changed in memory but till have not written on disk</td></tr>
-  <tr><td>RedDatabase_used_memory</td><td>The amount of used memory bytes.</td></tr>
+  <tr><td>[db_nickname]_db_size</td><td>The amount of database bytes which are taken to store data.</td><td>This metric does not have any label</td></tr>
+  <tr><td>[db_nickname]_diff_oldt_nt</td><td>The difference between Oldest transaction number and Next transaction number.</td><td>This metric does not have any label</td></tr>
+  <tr><td>[db_nickname]_active_users</td><td>The amount of active users in a database.</td><td>This metric does not have any label</td></tr>
+  <tr><td>[db_nickname]_io_stats</td><td>The amount of read, written, fetched, marked pages of a database.</td><td><strong>stat_id, stat_group, type</strong></td></tr>
+  <tr><td>[db_nickname]_used_memory</td><td>The amount of used memory bytes.</td><td>This metric does not have any label</td></tr>
 </table>
 
 # Exporter configuration file
