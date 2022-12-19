@@ -17,7 +17,7 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             response = ""
             for database in CONFIGURE["databases"]:
-                response += self.scrape(CONFIGURE["databases"][database])
+                response += self.scrape(database)
             self.wfile.write(response.encode())
         else:
             self.send_response(404)
@@ -36,7 +36,7 @@ class Handler(BaseHTTPRequestHandler):
         path_to_db = path_to_database.split(':')[1]
         if os.path.exists(path_to_db):
             db_size_in_bytes = os.path.getsize(path_to_db)
-        return "RedDatabase_db_size{} " + str(db_size_in_bytes) + "\n"
+        return "db_name_db_size{} " + str(db_size_in_bytes) + "\n"
 
     def scrape_transactions(self, path_to_gstat, path_to_database) -> str:
         out = subprocess.run([path_to_gstat, '-h', path_to_database], capture_output=True).stdout
@@ -50,7 +50,7 @@ class Handler(BaseHTTPRequestHandler):
             p[buffer[0]] = buffer[-1]
         del out
         difference_OLDT_NT = int(p["Next transaction"]) - int(p["Oldest transaction"])
-        return "RedDatabase_diff_oldt_nt{} " + str(difference_OLDT_NT) + "\n"
+        return "db_name_diff_oldt_nt{} " + str(difference_OLDT_NT) + "\n"
 
     def scrape_active_users(self, path_to_isql, path_to_database, login, password) -> str:
         with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True) as isql:
@@ -67,7 +67,7 @@ class Handler(BaseHTTPRequestHandler):
             active = int(record.split()[0])
             amount_of_active_users += active
 
-        return "RedDatabase_active_users{} " + str(amount_of_active_users) + "\n"
+        return "db_name_active_users{} " + str(amount_of_active_users) + "\n"
 
     def scrape_mon_io_stats(self, path_to_isql, path_to_database, login, password) -> str:
         with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -86,12 +86,12 @@ class Handler(BaseHTTPRequestHandler):
         FETCHES = out[4]
         MARKS = out[5]
 
-        response = "RedDatabase_mon_reads{} " + READS + "\nRedDatabase_mon_writes{} " + WRITES + "\nRedDatabase_mon_fetches{} " + FETCHES + "\nRedDatabase_mon_marks{} " + MARKS + "\n"
+        response = "db_name_mon_reads{} " + READS + "\ndb_name_mon_writes{} " + WRITES + "\ndb_name_mon_fetches{} " + FETCHES + "\ndb_name_mon_marks{} " + MARKS + "\n"
         return response
 
     def scrape_memory(self) -> str:
         memory = psutil.virtual_memory()
-        return "RedDatabase_used_memory{} " + str(memory.total - memory.available) + "\n"
+        return "db_name_used_memory{} " + str(memory.total - memory.available) + "\n"
 
 
 def run(server_class=HTTPServer, handler_class=Handler):
