@@ -25,7 +25,10 @@ The example of required content is:
   "port": 8000, 
   "login":  "SYSDBA", 
   "password":  "masterkey", 
-  "database": "localhost:[insert_path_to_database]",
+  "databases": {
+    "[db_nickname]": "localhost:[insert_path_to_database]",
+    "[another_db_nickname]": "localhost:[insert_path_to_another_database]"
+  }
   "utilities": "[insert_path_to_folder_with_utilities]"
 }
 ```
@@ -33,4 +36,10 @@ The example of required content is:
 <ul>
   <li>gstat</li>
   <li>isql</li>
+</ul>
+
+# Libraries
+You need to install next following libraries to make the exporter work:
+<ul>
+  <li><strong>psutil</strong> (pip install psutil)</li>
 </ul>
