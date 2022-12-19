@@ -8,6 +8,20 @@ from sys import platform
 
 CONFIGURE = {}
 
+def decode_group(code):
+    if code == 0:
+        return "database"
+    elif code == 1:
+        return "connection"
+    elif code == 2:
+        return "transaction"
+    elif code == 3:
+        return "statement"
+    elif code == 4:
+        return "call"
+    else:
+        return "Unknown"
+
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -73,20 +87,26 @@ class Handler(BaseHTTPRequestHandler):
         with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                               shell=True) as isql:
             out = isql.communicate(
-                f"CONNECT '{path_to_database}' USER '{login}' PASSWORD '{password}'; select * from MON$IO_STATS WHERE MON$STAT_GROUP = 0; QUIT;".encode())
+                f"CONNECT '{path_to_database}' USER '{login}' PASSWORD '{password}'; select * from MON$IO_STATS; QUIT;".encode())
         out = out[0].decode("UTF-8")  # get the string
         out = out.split('\n')
         for i in range(out.count('')):
             out.remove('')
         del out[0]
         del out[0]
-        out = out[0].split()
-        READS = out[2]
-        WRITES = out[3]
-        FETCHES = out[4]
-        MARKS = out[5]
+        IO_STATS = []
+        for line in out:
+            line = line.split()
+            IO_STATS.append({"stat_id": line[0], "stat_group": decode_group(int(line[1])), "page_reads": line[2], "page_writes": line[3], "page_fetches": line[4], "page_marks": line[5]})
 
-        response = "db_name_mon_reads{} " + READS + "\ndb_name_mon_writes{} " + WRITES + "\ndb_name_mon_fetches{} " + FETCHES + "\ndb_name_mon_marks{} " + MARKS + "\n"
+        response = ""
+
+        for stat in IO_STATS:
+            response += "db_name_io_stats{stat_id=\"" + stat["stat_id"] + "\",stat_group=\"" + stat["stat_group"] + "\",type=\"page_reads\"} " + stat["page_reads"] + "\n"
+            response += "db_name_io_stats{stat_id=\"" + stat["stat_id"] + "\",stat_group=\"" + stat["stat_group"] + "\",type=\"page_writes\"} " + stat["page_writes"] + "\n"
+            response += "db_name_io_stats{stat_id=\"" + stat["stat_id"] + "\",stat_group=\"" + stat["stat_group"] + "\",type=\"page_fetches\"} " + stat["page_fetches"] + "\n"
+            response += "db_name_io_stats{stat_id=\"" + stat["stat_id"] + "\",stat_group=\"" + stat["stat_group"] + "\",type=\"page_marks\"} " + stat["page_marks"] + "\n"
+
         return response
 
     def scrape_memory(self) -> str:
