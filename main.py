@@ -122,7 +122,6 @@ class Handler(BaseHTTPRequestHandler):
         with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True) as isql:
             out = isql.communicate(query.encode())
         out = out[0].decode("utf-8")
-        out = out[0].decode("utf-8")
         out = out.split('\n')
         for i in range(out.count('')):
             out.remove('')
