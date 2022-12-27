@@ -8,6 +8,7 @@ from sys import platform
 
 CONFIGURE = {}
 
+
 def decode_group(code):
     if code == 0:
         return "database"
@@ -19,6 +20,8 @@ def decode_group(code):
         return "statement"
     elif code == 4:
         return "call"
+    elif code == 5:
+        return "cached_query"
     else:
         return "Unknown"
 
@@ -42,6 +45,7 @@ class Handler(BaseHTTPRequestHandler):
         response += self.scrape_transactions(CONFIGURE["utilities"]["gstat"], CONFIGURE["databases"][db_name]).replace("db_name", db_name)
         response += self.scrape_active_users(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"],CONFIGURE["password"]).replace("db_name", db_name)
         response += self.scrape_mon_io_stats(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"], CONFIGURE["password"]).replace("db_name", db_name)
+        response += self.scrape_mon_memory_usage(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"], CONFIGURE["password"]).replace("db_name", db_name)
         response += self.scrape_memory().replace("db_name", db_name)
         return response
 
@@ -112,6 +116,34 @@ class Handler(BaseHTTPRequestHandler):
     def scrape_memory(self) -> str:
         memory = psutil.virtual_memory()
         return "db_name_used_memory{} " + str(memory.total - memory.available) + "\n"
+
+    def scrape_mon_memory_usage(self, path_to_isql, path_to_database, login, password) -> str:
+        query = f"CONNECT '{path_to_database}' USER '{login}' PASSWORD '{password}'; select * from MON$MEMORY_USAGE; QUIT;"
+        with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True) as isql:
+            out = isql.communicate(query.encode())
+        out = out[0].decode("utf-8")
+        out = out[0].decode("utf-8")
+        out = out.split('\n')
+        for i in range(out.count('')):
+            out.remove('')
+        del out[0]
+        del out[0]
+        MEMORY_USAGE = []
+        for line in out:
+            line = line.split()
+            MEMORY_USAGE.append({"stat_id": line[0],
+                                 "stat_group": decode_group(int(line[1])),
+                                 "memory_used": line[2],
+                                 "memory_allocated": line[3],
+                                 "max_memory_used": line[4],
+                                 "max_memory_allocated": line[5]})
+        response = ""
+        for stat in MEMORY_USAGE:
+            response += "db_name_memory_usage{stat_id=\"%s\",stat_group=\"%s\",type=\"memory_used\"} %s\n" % (stat["stat_id"], stat["stat_group"], stat["memory_used"])
+            response += "db_name_memory_usage{stat_id=\"%s\",stat_group=\"%s\",type=\"memory_allocated\"} %s\n" % (stat["stat_id"], stat["stat_group"], stat["memory_allocated"])
+            response += "db_name_memory_usage{stat_id=\"%s\",stat_group=\"%s\",type=\"max_memory_used\"} %s\n" % (stat["stat_id"], stat["stat_group"], stat["max_memory_used"])
+            response += "db_name_memory_usage{stat_id=\"%s\",stat_group=\"%s\",type=\"max_memory_allocated\"} %s\n" % (stat["stat_id"], stat["stat_group"], stat["max_memory_allocated"])
+        return response
 
 
 def run(server_class=HTTPServer, handler_class=Handler):
