@@ -5,8 +5,14 @@ import psutil
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
 from sys import platform
+import firebirdsql
 
 CONFIGURE = {}
+
+
+def close_connections():
+    for connection in CONFIGURE["connections"]:
+        CONFIGURE["connections"][connection].close()
 
 
 def decode_group(code):
@@ -150,7 +156,9 @@ def run(server_class=HTTPServer, handler_class=Handler):
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
+        close_connections()
         httpd.server_close()
+        print("Exporter has been closed")
 
 
 if __name__ == "__main__":
@@ -175,4 +183,19 @@ if __name__ == "__main__":
             "isql": utilities_path + "isql.exe"
         }
 
+    # Opening connections
+    try:
+        CONFIGURE["connections"] = {}
+        for database in CONFIGURE["databases"]:
+            conf = CONFIGURE["databases"][database]
+            CONFIGURE["connections"][database] = firebirdsql.connect(
+                host=conf.split(':')[0],
+                database=conf.split(':')[1],
+                port=3050,
+                user=CONFIGURE["login"],
+                password=CONFIGURE["password"]
+            )
+    except:
+        close_connections()
+        exit(1)
     run()
