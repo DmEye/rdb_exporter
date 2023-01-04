@@ -41,22 +41,22 @@ class Handler(BaseHTTPRequestHandler):
 
     def scrape(self, db_name) -> str:
         response = ""
-        response += self.scrape_db_size(CONFIGURE["databases"][db_name]).replace("db_name", db_name)
-        response += self.scrape_transactions(CONFIGURE["utilities"]["gstat"], CONFIGURE["databases"][db_name]).replace("db_name", db_name)
-        response += self.scrape_active_users(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"],CONFIGURE["password"]).replace("db_name", db_name)
-        response += self.scrape_mon_io_stats(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"], CONFIGURE["password"]).replace("db_name", db_name)
-        response += self.scrape_mon_memory_usage(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"], CONFIGURE["password"]).replace("db_name", db_name)
-        response += self.scrape_memory().replace("db_name", db_name)
+        response += self.scrape_db_size(CONFIGURE["databases"][db_name], db_name)
+        response += self.scrape_transactions(CONFIGURE["utilities"]["gstat"], CONFIGURE["databases"][db_name], db_name)
+        response += self.scrape_active_users(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"],CONFIGURE["password"], db_name)
+        response += self.scrape_mon_io_stats(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"], CONFIGURE["password"], db_name)
+        response += self.scrape_mon_memory_usage(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"], CONFIGURE["password"], db_name)
+        response += self.scrape_memory(db_name)
         return response
 
-    def scrape_db_size(self, path_to_database) -> str:
+    def scrape_db_size(self, path_to_database, db_name) -> str:
         db_size_in_bytes = 0
         path_to_db = path_to_database.split(':')[1]
         if os.path.exists(path_to_db):
             db_size_in_bytes = os.path.getsize(path_to_db)
-        return "db_name_db_size{} " + str(db_size_in_bytes) + "\n"
+        return "db_size{database=\"%s\"} %i\n" % (db_name, db_size_in_bytes)
 
-    def scrape_transactions(self, path_to_gstat, path_to_database) -> str:
+    def scrape_transactions(self, path_to_gstat, path_to_database, db_name) -> str:
         out = subprocess.run([path_to_gstat, '-h', path_to_database], capture_output=True).stdout
         out = [row.replace('\r', '') for row in str(out, encoding="UTF-8").split('\n')]
         for i in range(out.count('')):
@@ -68,9 +68,9 @@ class Handler(BaseHTTPRequestHandler):
             p[buffer[0]] = buffer[-1]
         del out
         difference_OLDT_NT = int(p["Next transaction"]) - int(p["Oldest transaction"])
-        return "db_name_diff_oldt_nt{} " + str(difference_OLDT_NT) + "\n"
+        return "diff_oldt_nt{database=\"%s\"} %i\n" % (db_name, difference_OLDT_NT)
 
-    def scrape_active_users(self, path_to_isql, path_to_database, login, password) -> str:
+    def scrape_active_users(self, path_to_isql, path_to_database, login, password, db_name) -> str:
         with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True) as isql:
             out = isql.communicate(
                 f"CONNECT '{path_to_database}' USER '{login}' PASSWORD '{password}'; SHOW USERS; QUIT;".encode())
@@ -85,9 +85,9 @@ class Handler(BaseHTTPRequestHandler):
             active = int(record.split()[0])
             amount_of_active_users += active
 
-        return "db_name_active_users{} " + str(amount_of_active_users) + "\n"
+        return "active_users{database=\"%s\"} %i\n" % (db_name, amount_of_active_users)
 
-    def scrape_mon_io_stats(self, path_to_isql, path_to_database, login, password) -> str:
+    def scrape_mon_io_stats(self, path_to_isql, path_to_database, login, password, db_name) -> str:
         with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                               shell=True) as isql:
             out = isql.communicate(
@@ -101,23 +101,22 @@ class Handler(BaseHTTPRequestHandler):
         IO_STATS = []
         for line in out:
             line = line.split()
-            IO_STATS.append({"stat_id": line[0], "stat_group": decode_group(int(line[1])), "page_reads": line[2], "page_writes": line[3], "page_fetches": line[4], "page_marks": line[5]})
+            IO_STATS.append({"stat_id": line[0], "stat_group": decode_group(int(line[1])), "read_pages": line[2], "written_pages": line[3], "fetched_pages": line[4], "marked_pages": line[5]})
 
         response = ""
 
         for stat in IO_STATS:
-            response += "db_name_io_stats{stat_id=\"" + stat["stat_id"] + "\",stat_group=\"" + stat["stat_group"] + "\",type=\"page_reads\"} " + stat["page_reads"] + "\n"
-            response += "db_name_io_stats{stat_id=\"" + stat["stat_id"] + "\",stat_group=\"" + stat["stat_group"] + "\",type=\"page_writes\"} " + stat["page_writes"] + "\n"
-            response += "db_name_io_stats{stat_id=\"" + stat["stat_id"] + "\",stat_group=\"" + stat["stat_group"] + "\",type=\"page_fetches\"} " + stat["page_fetches"] + "\n"
-            response += "db_name_io_stats{stat_id=\"" + stat["stat_id"] + "\",stat_group=\"" + stat["stat_group"] + "\",type=\"page_marks\"} " + stat["page_marks"] + "\n"
-
+            response += "io_stats{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"read_pages\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["read_pages"])
+            response += "io_stats{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"written_pages\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["written_pages"])
+            response += "io_stats{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"fetched_pages\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["fetched_pages"])
+            response += "io_stats{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"marked_pages\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["marked_pages"])
         return response
 
-    def scrape_memory(self) -> str:
+    def scrape_memory(self, db_name) -> str:
         memory = psutil.virtual_memory()
-        return "db_name_used_memory{} " + str(memory.total - memory.available) + "\n"
+        return "used_memory{database=\"%s\"} %f\n" % (db_name, memory.total - memory.available)
 
-    def scrape_mon_memory_usage(self, path_to_isql, path_to_database, login, password) -> str:
+    def scrape_mon_memory_usage(self, path_to_isql, path_to_database, login, password, db_name) -> str:
         query = f"CONNECT '{path_to_database}' USER '{login}' PASSWORD '{password}'; select * from MON$MEMORY_USAGE; QUIT;"
         with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True) as isql:
             out = isql.communicate(query.encode())
@@ -138,10 +137,10 @@ class Handler(BaseHTTPRequestHandler):
                                  "max_memory_allocated": line[5]})
         response = ""
         for stat in MEMORY_USAGE:
-            response += "db_name_memory_usage{stat_id=\"%s\",stat_group=\"%s\",type=\"memory_used\"} %s\n" % (stat["stat_id"], stat["stat_group"], stat["memory_used"])
-            response += "db_name_memory_usage{stat_id=\"%s\",stat_group=\"%s\",type=\"memory_allocated\"} %s\n" % (stat["stat_id"], stat["stat_group"], stat["memory_allocated"])
-            response += "db_name_memory_usage{stat_id=\"%s\",stat_group=\"%s\",type=\"max_memory_used\"} %s\n" % (stat["stat_id"], stat["stat_group"], stat["max_memory_used"])
-            response += "db_name_memory_usage{stat_id=\"%s\",stat_group=\"%s\",type=\"max_memory_allocated\"} %s\n" % (stat["stat_id"], stat["stat_group"], stat["max_memory_allocated"])
+            response += "memory_usage{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"memory_used\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["memory_used"])
+            response += "memory_usage{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"memory_allocated\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["memory_allocated"])
+            response += "memory_usage{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"max_memory_used\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["max_memory_used"])
+            response += "memory_usage{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"max_memory_allocated\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["max_memory_allocated"])
         return response
 
 
