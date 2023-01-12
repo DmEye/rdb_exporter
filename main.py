@@ -121,16 +121,16 @@ class Handler(BaseHTTPRequestHandler):
         response = ""
         transactions = cursor.fetchall()
         for transaction in transactions:
-            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"attachment_id\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2])
-            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"state\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[3])
-            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"top_transaction\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[4])
-            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"oldest_transaction\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[5])
-            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"oldest_active\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[6])
-            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"isolation_mode\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[7])
-            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"lock_timeout\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[8])
-            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"read_only\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[9])
-            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"auto_commit\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[10])
-            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"auto_undo\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[11])
+            response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"attachment_id\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2])
+            response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"state\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[3])
+            response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"top_transaction\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[4])
+            response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"oldest_transaction\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[5])
+            response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"oldest_active\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[6])
+            response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"isolation_mode\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[7])
+            response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"lock_timeout\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[8])
+            response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"read_only\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[9])
+            response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"auto_commit\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[10])
+            response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"auto_undo\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[11])
         return response
 
     def scrape_mon_statements(self, cursor, db_name) -> str:
@@ -138,9 +138,9 @@ class Handler(BaseHTTPRequestHandler):
         response = ""
         statements = cursor.fetchall()
         for statement in statements:
-            response += "mon_statements{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", type=\"attachment_id\"} %i\n" % (db_name, statement[0], statement[1], statement[2])
-            response += "mon_statements{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", type=\"transaction_id\"} %i\n" % (db_name, statement[0], statement[1], -1 if statement[3] is None else statement[3])
-            response += "mon_statements{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", type=\"state\"} %i\n" % (db_name, statement[0], statement[1], statement[4])
+            response += "mon_statement{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", type=\"attachment_id\"} %i\n" % (db_name, statement[0], statement[1], statement[2])
+            response += "mon_statement{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", type=\"transaction_id\"} %i\n" % (db_name, statement[0], statement[1], -1 if statement[3] is None else statement[3])
+            response += "mon_statement{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", type=\"state\"} %i\n" % (db_name, statement[0], statement[1], statement[4])
         return response
 
     def scrape_mon_io_stats(self, cursor, db_name) -> str:
