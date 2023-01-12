@@ -15,6 +15,17 @@ def close_connections():
         CONFIGURE["connections"][connection].close()
 
 
+def decode_call_object_type(code):
+    if code == 2:
+        return "trigger"
+    elif code == 5:
+        return "procedure"
+    elif code == 15:
+        return "function"
+    else:
+        return "Unknown"
+
+
 def decode_group(code):
     if code == 0:
         return "database"
@@ -40,6 +51,7 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             response = ""
             for database in CONFIGURE["databases"]:
+                CONFIGURE["connections"][database].commit()
                 response += self.scrape(database)
             self.wfile.write(response.encode())
         else:
@@ -47,12 +59,17 @@ class Handler(BaseHTTPRequestHandler):
 
     def scrape(self, db_name) -> str:
         response = ""
-        response += self.scrape_db_size(CONFIGURE["databases"][db_name], db_name)
-        response += self.scrape_transactions(CONFIGURE["utilities"]["gstat"], CONFIGURE["databases"][db_name], db_name)
-        response += self.scrape_active_users(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"],CONFIGURE["password"], db_name)
-        response += self.scrape_mon_io_stats(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"], CONFIGURE["password"], db_name)
-        response += self.scrape_mon_memory_usage(CONFIGURE["utilities"]["isql"], CONFIGURE["databases"][db_name], CONFIGURE["login"], CONFIGURE["password"], db_name)
-        response += self.scrape_memory(db_name)
+        cursor = CONFIGURE["connections"][db_name].cursor()
+        response += self.scrape_mon_database(cursor, db_name)
+        response += self.scrape_mon_attachments(cursor, db_name)
+        response += self.scrape_mon_transactions(cursor, db_name)
+        response += self.scrape_mon_statements(cursor, db_name)
+        response += self.scrape_mon_io_stats(cursor, db_name)
+        response += self.scrape_mon_memory_usage(cursor, db_name)
+        response += self.scrape_mon_call_stack(cursor, db_name)
+        response += self.scrape_db_size(CONFIGURE["databasese"][db_name], db_name)
+
+        cursor.close()
         return response
 
     def scrape_db_size(self, path_to_database, db_name) -> str:
@@ -62,91 +79,104 @@ class Handler(BaseHTTPRequestHandler):
             db_size_in_bytes = os.path.getsize(path_to_db)
         return "db_size{database=\"%s\"} %i\n" % (db_name, db_size_in_bytes)
 
-    def scrape_transactions(self, path_to_gstat, path_to_database, db_name) -> str:
-        out = subprocess.run([path_to_gstat, '-h', path_to_database], capture_output=True).stdout
-        out = [row.replace('\r', '') for row in str(out, encoding="UTF-8").split('\n')]
-        for i in range(out.count('')):
-            out.remove('')
-        out = [row[1:] for row in out]
-        p = {}
-        for row in out:
-            buffer = row.split('\t')
-            p[buffer[0]] = buffer[-1]
-        del out
-        difference_OLDT_NT = int(p["Next transaction"]) - int(p["Oldest transaction"])
-        return "diff_oldt_nt{database=\"%s\"} %i\n" % (db_name, difference_OLDT_NT)
-
-    def scrape_active_users(self, path_to_isql, path_to_database, login, password, db_name) -> str:
-        with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True) as isql:
-            out = isql.communicate(
-                f"CONNECT '{path_to_database}' USER '{login}' PASSWORD '{password}'; SHOW USERS; QUIT;".encode())
-        out = out[0].decode("UTF-8")  # get the string
-        # extracting data
-        out = out.split('\n')
-        del out[0]  # remove header
-        del out[-1]  # remove empty string
-
-        amount_of_active_users = 0
-        for record in out:
-            active = int(record.split()[0])
-            amount_of_active_users += active
-
-        return "active_users{database=\"%s\"} %i\n" % (db_name, amount_of_active_users)
-
-    def scrape_mon_io_stats(self, path_to_isql, path_to_database, login, password, db_name) -> str:
-        with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                              shell=True) as isql:
-            out = isql.communicate(
-                f"CONNECT '{path_to_database}' USER '{login}' PASSWORD '{password}'; select * from MON$IO_STATS; QUIT;".encode())
-        out = out[0].decode("UTF-8")  # get the string
-        out = out.split('\n')
-        for i in range(out.count('')):
-            out.remove('')
-        del out[0]
-        del out[0]
-        IO_STATS = []
-        for line in out:
-            line = line.split()
-            IO_STATS.append({"stat_id": line[0], "stat_group": decode_group(int(line[1])), "read_pages": line[2], "written_pages": line[3], "fetched_pages": line[4], "marked_pages": line[5]})
-
+    def scrape_mon_database(self, cursor, db_name) -> str:
+        cursor.execute("SELECT MON$STAT_ID, MON$OLDEST_SNAPSHOT, MON$NEXT_TRANSACTION, MON$PAGE_BUFFERS, MON$SQL_DIALECT, MON$SHUTDOWN_MODE, MON$SWEEP_INTERVAL, MON$READ_ONLY, MON$FORCED_WRITES, MON$RESERVE_SPACE, MON$PAGES, MON$BACKUP_STATE, MON$CRYPT_PAGE FROM MON$DATABASE;")
         response = ""
-
-        for stat in IO_STATS:
-            response += "io_stats{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"read_pages\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["read_pages"])
-            response += "io_stats{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"written_pages\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["written_pages"])
-            response += "io_stats{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"fetched_pages\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["fetched_pages"])
-            response += "io_stats{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"marked_pages\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["marked_pages"])
+        for database in cursor.fetchall():
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"oldest_snapshot\"} %i\n" % (db_name, database[0], database[1])
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"next_transaction\"} %i\n" % (db_name, database[0], database[2])
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"page_buffers\"} %i\n" % (db_name, database[0], database[3])
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"SQL_dialect\"} %i\n" % (db_name, database[0], database[4])
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"shutdown_mode\"} %i\n" % (db_name, database[0], database[5])
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"sweep_interval\"} %i\n" % (db_name, database[0], database[6])
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"read_only\"} %i\n" % (db_name, database[0], database[7])
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"forced_writes\"} %i\n" % (db_name, database[0], database[8])
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"reserve_space\"} %i\n" % (db_name, database[0], database[9])
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"pages\"} %i\n" % (db_name, database[0], database[10])
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"crypt_page\"} %i\n" % (db_name, database[0], database[11])
         return response
 
-    def scrape_memory(self, db_name) -> str:
-        memory = psutil.virtual_memory()
-        return "used_memory{database=\"%s\"} %f\n" % (db_name, memory.total - memory.available)
-
-    def scrape_mon_memory_usage(self, path_to_isql, path_to_database, login, password, db_name) -> str:
-        query = f"CONNECT '{path_to_database}' USER '{login}' PASSWORD '{password}'; select * from MON$MEMORY_USAGE; QUIT;"
-        with subprocess.Popen(path_to_isql, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True) as isql:
-            out = isql.communicate(query.encode())
-        out = out[0].decode("utf-8")
-        out = out.split('\n')
-        for i in range(out.count('')):
-            out.remove('')
-        del out[0]
-        del out[0]
-        MEMORY_USAGE = []
-        for line in out:
-            line = line.split()
-            MEMORY_USAGE.append({"stat_id": line[0],
-                                 "stat_group": decode_group(int(line[1])),
-                                 "memory_used": line[2],
-                                 "memory_allocated": line[3],
-                                 "max_memory_used": line[4],
-                                 "max_memory_allocated": line[5]})
+    def scrape_mon_attachments(self, cursor, db_name) -> str:
+        cursor.execute("SELECT MON$STAT_ID, MON$ATTACHMENT_ID, MON$SERVER_PID, MON$STATE, MON$REMOTE_PID, MON$CHARACTER_SET_ID, MON$GARBAGE_COLLECTION, MON$SYSTEM_FLAG, MON$REPL_WAITFLUSH_COUNT, MON$REPL_WAITFLUSH_TIME FROM MON$ATTACHMENTS;")
         response = ""
-        for stat in MEMORY_USAGE:
-            response += "memory_usage{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"memory_used\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["memory_used"])
-            response += "memory_usage{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"memory_allocated\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["memory_allocated"])
-            response += "memory_usage{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"max_memory_used\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["max_memory_used"])
-            response += "memory_usage{database=\"%s\",stat_id=\"%s\",stat_group=\"%s\",type=\"max_memory_allocated\"} %s\n" % (db_name, stat["stat_id"], stat["stat_group"], stat["max_memory_allocated"])
+        active_users = 0
+        attachments = cursor.fetchall()
+        for attachment in attachments:
+            response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"server_pid\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[2])
+            response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"state\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[3])
+            response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"remote_pid\"} %i\n" % (db_name, attachment[0], attachment[1], 0 if attachment[4] is None else attachment[4])
+            response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"character_set_id\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[5])
+            response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"garbage_collection\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[6])
+            response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"system_flag\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[7])
+            response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"repl_waitflush_count\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[8])
+            response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"repl_waitflush_time\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[9])
+            if attachment[3] == 1:
+                active_users += 1
+        response += "active_users{database=\"%s\"} %i\n" % (db_name, active_users)
+        response += "amount_of_attachments{database=\"%s\"} %i\n" % (db_name, len(attachments))
+        return response
+
+    def scrape_mon_transactions(self, cursor, db_name) -> str:
+        cursor.execute("SELECT MON$STAT_ID, MON$TRANSACTION_ID, MON$ATTACHMENT_ID, MON$STATE, MON$TOP_TRANSACTION, MON$OLDEST_TRANSACTION, MON$OLDEST_ACTIVE, MON$ISOLATION_MODE, MON$LOCK_TIMEOUT, MON$READ_ONLY, MON$AUTO_COMMIT, MON$AUTO_UNDO FROM MON$TRANSACTIONS")
+        response = ""
+        transactions = cursor.fetchall()
+        for transaction in transactions:
+            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"attachment_id\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2])
+            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"state\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[3])
+            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"top_transaction\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[4])
+            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"oldest_transaction\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[5])
+            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"oldest_active\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[6])
+            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"isolation_mode\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[7])
+            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"lock_timeout\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[8])
+            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"read_only\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[9])
+            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"auto_commit\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[10])
+            response += "mon_transactions{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"auto_undo\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[11])
+        return response
+
+    def scrape_mon_statements(self, cursor, db_name) -> str:
+        cursor.execute("SELECT MON$STAT_ID, MON$STATEMENT_ID, MON$ATTACHMENT_ID, MON$TRANSACTION_ID, MON$STATE FROM MON$STATEMENTS")
+        response = ""
+        statements = cursor.fetchall()
+        for statement in statements:
+            response += "mon_statements{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", type=\"attachment_id\"} %i\n" % (db_name, statement[0], statement[1], statement[2])
+            response += "mon_statements{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", type=\"transaction_id\"} %i\n" % (db_name, statement[0], statement[1], -1 if statement[3] is None else statement[3])
+            response += "mon_statements{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", type=\"state\"} %i\n" % (db_name, statement[0], statement[1], statement[4])
+        return response
+
+    def scrape_mon_io_stats(self, cursor, db_name) -> str:
+        cursor.execute("SELECT MON$STAT_ID, MON$STAT_GROUP, MON$PAGE_READS, MON$PAGE_WRITES, MON$PAGE_FETCHES, MON$PAGE_MARKS FROM MON$IO_STATS")
+        response = ""
+        io = cursor.fetchall()
+        for record in io:
+            group = decode_group(record[1])
+            response += "mon_io_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"page_reads\"} %i\n" % (db_name, record[0], group, record[2])
+            response += "mon_io_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"page_writes\"} %i\n" % (db_name, record[0], group, record[3])
+            response += "mon_io_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"page_fetches\"} %i\n" % (db_name, record[0], group, record[4])
+            response += "mon_io_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"page_marks\"} %i\n" % (db_name, record[0], group, record[5])
+        return response
+
+    def scrape_mon_memory_usage(self, cursor, db_name) -> str:
+        cursor.execute("SELECT MON$STAT_ID, MON$STAT_GROUP, MON$MEMORY_USED, MON$MEMORY_ALLOCATED, MON$MAX_MEMORY_USED, MON$MAX_MEMORY_ALLOCATED FROM MON$MEMORY_USAGE")
+        response = ""
+        data = cursor.fetchall()
+        for record in data:
+            group = decode_group(record[1])
+            response += "mon_memory_usage{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"memory_used\"} %i\n" % (db_name, record[0], group, record[2])
+            response += "mon_memory_usage{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"memory_allocated\"} %i\n" % (db_name, record[0], group, record[3])
+            response += "mon_memory_usage{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"max_memory_used\"} %i\n" % (db_name, record[0], group, record[4])
+            response += "mon_memory_usage{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"max_memory_allocated\"} %i\n" % (db_name, record[0], group, record[5])
+        return response
+
+    def scrape_mon_call_stack(self, cursor, db_name):
+        cursor.execute("SELECT MON$STAT_ID, MON$CALL_ID, MON$OBJECT_TYPE, MON$STATEMENT_ID, MON$CALLER_ID, MON$SOURCE_LINE, MON$SOURCE_COLUMN FROM MON$CALL_STACK")
+        response = ""
+        data = cursor.fetchall()
+        for record in data:
+            object_type = decode_call_object_type(record[2])
+            response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"statement_id\"} %i\n" % (db_name, record[0], record[1], object_type, record[3])
+            response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"caller_id\"} %i\n" % (db_name, record[0], record[1], object_type, record[4])
+            response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"source_line\"} %i\n" % (db_name, record[0], record[1], object_type, record[5])
+            response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"source_column\"} %i\n" % (db_name, record[0], record[1], object_type, record[6])
         return response
 
 
