@@ -81,9 +81,10 @@ class Handler(BaseHTTPRequestHandler):
         return "db_size{database=\"%s\"} %i\n" % (db_name, db_size_in_bytes)
 
     def scrape_mon_database(self, cursor, db_name) -> str:
-        cursor.execute("SELECT MON$STAT_ID, MON$OLDEST_SNAPSHOT, MON$NEXT_TRANSACTION, MON$PAGE_BUFFERS, MON$SQL_DIALECT, MON$SHUTDOWN_MODE, MON$SWEEP_INTERVAL, MON$READ_ONLY, MON$FORCED_WRITES, MON$RESERVE_SPACE, MON$PAGES, MON$BACKUP_STATE, MON$CRYPT_PAGE FROM MON$DATABASE;")
+        cursor.execute("SELECT MON$STAT_ID, MON$OLDEST_SNAPSHOT, MON$NEXT_TRANSACTION, MON$PAGE_BUFFERS, MON$SQL_DIALECT, MON$SHUTDOWN_MODE, MON$SWEEP_INTERVAL, MON$READ_ONLY, MON$FORCED_WRITES, MON$RESERVE_SPACE, MON$PAGES, MON$BACKUP_STATE, MON$CRYPT_PAGE, MON$OLDEST_TRANSACTION, MON$OLDEST_ACTIVE FROM MON$DATABASE;")
         response = ""
-        for database in cursor.fetchall():
+        databases = cursor.fetchall()
+        for database in databases:
             response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"oldest_snapshot\"} %i\n" % (db_name, database[0], database[1])
             response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"next_transaction\"} %i\n" % (db_name, database[0], database[2])
             response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"page_buffers\"} %i\n" % (db_name, database[0], database[3])
@@ -95,6 +96,9 @@ class Handler(BaseHTTPRequestHandler):
             response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"reserve_space\"} %i\n" % (db_name, database[0], database[9])
             response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"pages\"} %i\n" % (db_name, database[0], database[10])
             response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"crypt_page\"} %i\n" % (db_name, database[0], database[11])
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"oldest_transaction\"} %i\n" % (db_name, database[0], database[12])
+            response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"oldest_active\"} %i\n" % (db_name, database[0], database[13])
+        response += "diff_oldt_nt{database=\"%s\"} %i\n" % (db_name, databases[0][2] - databases[0][12])
         return response
 
     def scrape_mon_attachments(self, cursor, db_name) -> str:
@@ -168,7 +172,7 @@ class Handler(BaseHTTPRequestHandler):
             response += "mon_memory_usage{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"max_memory_allocated\"} %i\n" % (db_name, record[0], group, record[5])
         return response
 
-    def scrape_mon_call_stack(self, cursor, db_name):
+    def scrape_mon_call_stack(self, cursor, db_name) -> str:
         cursor.execute("SELECT MON$STAT_ID, MON$CALL_ID, MON$OBJECT_TYPE, MON$STATEMENT_ID, MON$CALLER_ID, MON$SOURCE_LINE, MON$SOURCE_COLUMN FROM MON$CALL_STACK")
         response = ""
         data = cursor.fetchall()
@@ -190,15 +194,6 @@ class Handler(BaseHTTPRequestHandler):
         response += "system_memory{type=\"total\"} %i\n" % memory.total
         response += "system_cpu{type=\"percent\"} %f\n" % psutil.cpu_percent()
         response += "system_cpu{type=\"frequency\"} %i\n" % cpu_freq.current
-        response += "system_disk{type=\"read_count\"} %i\n" % disks.read_count
-        response += "system_disk{type=\"write_count\"} %i\n" % disks.write_count
-        response += "system_disk{type=\"read_bytes\"} %i\n" % disks.read_bytes
-        response += "system_disk{type=\"write_bytes\"} %i\n" % disks.write_bytes
-        response += "system_disk{type=\"read_time\"} %i\n" % disks.read_time
-        response += "system_disk{type=\"write_time\"} %i\n" % disks.write_time
-        response += "system_disk{type=\"read_merged_count\"} %i\n" % disks.read_merged_count
-        response += "system_disk{type=\"write_merged_count\"} %i\n" % disks.write_merged_count
-        response += "system_disk{type=\"busy_time\"} %i\n" % disks.busy_time
 
         return response
 
