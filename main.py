@@ -50,6 +50,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-type", "text/html")
             self.end_headers()
             response = ""
+            response += self.scrape_system_metrics()
             for database in CONFIGURE["databases"]:
                 CONFIGURE["connections"][database].commit()
                 response += self.scrape(database)
@@ -179,6 +180,28 @@ class Handler(BaseHTTPRequestHandler):
             response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"source_column\"} %i\n" % (db_name, record[0], record[1], object_type, record[6])
         return response
 
+    def scrape_system_metrics(self) -> str:
+        response = ""
+        memory = psutil.virtual_memory()
+        cpu_freq = psutil.cpu_freq()
+        disks = psutil.disk_io_counters()
+        response += "system_memory{type=\"used\"} %i\n" % (memory.total - memory.available)
+        response += "system_memory{type=\"available\"} %i\n" % memory.available
+        response += "system_memory{type=\"total\"} %i\n" % memory.total
+        response += "system_cpu{type=\"percent\"} %f\n" % psutil.cpu_percent()
+        response += "system_cpu{type=\"frequency\"} %i\n" % cpu_freq.current
+        response += "system_disk{type=\"read_count\"} %i\n" % disks.read_count
+        response += "system_disk{type=\"write_count\"} %i\n" % disks.write_count
+        response += "system_disk{type=\"read_bytes\"} %i\n" % disks.read_bytes
+        response += "system_disk{type=\"write_bytes\"} %i\n" % disks.write_bytes
+        response += "system_disk{type=\"read_time\"} %i\n" % disks.read_time
+        response += "system_disk{type=\"write_time\"} %i\n" % disks.write_time
+        response += "system_disk{type=\"read_merged_count\"} %i\n" % disks.read_merged_count
+        response += "system_disk{type=\"write_merged_count\"} %i\n" % disks.write_merged_count
+        response += "system_disk{type=\"busy_time\"} %i\n" % disks.busy_time
+
+        return response
+
 
 def run(server_class=HTTPServer, handler_class=Handler):
     server_address = ('', CONFIGURE["port"])
@@ -221,7 +244,7 @@ if __name__ == "__main__":
             CONFIGURE["connections"][database] = firebirdsql.connect(
                 host=conf.split(':')[0],
                 database=conf.split(':')[1],
-                port=3050,
+                port=CONFIGURE["RDB_port"],
                 user=CONFIGURE["login"],
                 password=CONFIGURE["password"]
             )
