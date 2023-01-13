@@ -5,15 +5,101 @@ This is a prometheus exporter for DBMS "Red Database".
   <tr>
     <th>Name</th>
     <th>Description</th>
-    <th>Labels</th>
-    <th>Possible values of labels</th>
   </tr>
-  <tr><td>[db_nickname]_db_size</td><td>The amount of database bytes which are taken to store data.</td><td>This metric does not have any label</td><td>-</td></tr>
-  <tr><td>[db_nickname]_diff_oldt_nt</td><td>The difference between Oldest transaction number and Next transaction number.</td><td>This metric does not have any label</td><td>-</td></tr>
-  <tr><td>[db_nickname]_active_users</td><td>The amount of active users in a database.</td><td>This metric does not have any label</td><td>-</td></tr>
-  <tr><td>[db_nickname]_io_stats</td><td>The amount of read, written, fetched, marked pages of a database.</td><td><strong>stat_id, stat_group, type</strong></td><td><p><strong>stat_id</strong>: positive integer</p><p><strong>stat_group</strong>: database, connection, transaction, statement, call, cached_query</p><p><strong>type</strong>: page_reads, page_writes, page_fetches, page_marks</p></td></tr>
-  <tr><td>[db_nickname]_used_memory</td><td>The amount of used memory bytes.</td><td>This metric does not have any label</td><td>-</td></tr>
-  <tr><td>[db_nickname]_memory_usage</td><td>Information about memory usage by database/connections/transactions/statements/calls/cached_queries</td><td><strong>stat_id, stat_group, type</strong></td><td><p><strong>stat_id</strong>: positive integer</p><p><strong>stat_group</strong>: database, connection, transaction, statement, call, cached_query</p><p><strong>type</strong>: memory_used, memory_allocated, max_memory_used, max_memory_allocated</p></td></tr>
+  <tr><td>db_size</td><td>The amount of database bytes which are taken to store data.</td></tr>
+  <tr><td>diff_oldt_nt</td><td>The difference between Oldest transaction number and Next transaction number.</td></tr>
+  <tr><td>active_users</td><td>The amount of active users in a database.</td></tr>
+  <tr><td>mon_io_stats</td><td>The amount of read, written, fetched, marked pages of a database/connections/transactions/statements/calls.</td></tr>
+  <tr><td>mon_memory_usage</td><td>Information about memory usage by database/connections/transactions/statements/calls/cached_queries</td></tr>
+  <tr>
+    <td>mon_database</td><td>Information about a database:
+      <ul>
+        <li><b>oldest_snapshot</b>: The number of the transaction that was active at the moment when the OAT was started — oldest snapshot transaction (OST)</li>
+        <li><b>next_transaction</b>: The number of the next transaction, as it stood when the monitoring snapshot was taken</li>
+        <li><b>oldest_transaction</b>: The number of the oldest [interesting] transaction (OIT)</li>
+        <li><b>oldest_active</b>: The number of the oldest active transaction (OAT)</li>
+        <li><b>page_buffers</b>: The number of pages allocated in RAM for the database page cache</li>
+        <li><b>SQL_dialect</b>: Database SQL Dialect: 1 or 3</li>
+        <li><b>shutdown_mode</b>: The current shutdown state of the database: <br>0 - the database is online <br>1 - multi-user shutdown <br>2 - single-user shutdown <br>3 - full shutdown</li>
+        <li><b>sweep_interval</b>: sweep interval</li>
+        <li><b>read_only</b>: Flag indicating whether the database is read-only (value 1) or read-write (value 0)</li>
+        <li><b>forced_writes</b>: Indicates whether the write mode of the database is set for synchronous write (forced writes ON, value is 1) or asynchronous write (forced writes OFF, value is 0)</li>
+        <li><b>reserve_space</b>: The flag indicating reserve_space (value 1) or use_all_space (value 0) for filling database pages</li>
+        <li><b>pages</b>: The number of pages allocated for the database on an external device</li>
+        <li><b>crypt_page</b>: Number of encrypted pages</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>mon_attachment</td><td>Displays information about active attachments to the database:
+      <ul>
+        <li><b>server_pid</b>: Server process identifier</li>
+        <li><b>state</b>: Connection state: <br>0 - idle <br>1 - active</li>
+        <li><b>remote_pid</b>: Remote client process identifier</li>
+        <li><b>character_set_id</b>: Connection character set identifier (see RDB$CHARACTER_SET in system table RDB$TYPES)</li>
+        <li><b>garbage_collection</b>: Garbage collection flag (as specified in the attachment’s DPB): <br>1=allowed, <br>0=not allowed</li>
+        <li><b>system_flag</b>: Flag that indicates the type of connection: <br>0 - normal connection <br>1 - system connection</li>
+        <li><b>repl_waitflush_count</b>: Number of packets sent to reserve databases.</li>
+        <li><b>repl_waitflush_time</b>: Time (in ms) that the main server waits for a response from backup servers.</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>mon_transaction</td><td>Reports started transactions:
+    <ul>
+      <li><b>attachment_id</b>: Connection identifier</li>
+      <li><b>state</b>: Transaction state: <br>0 - idle <br>1 - active</li>
+      <li><b>top_transaction</b>: Top-level transaction identifier (number)</li>
+      <li><b>oldest_transaction</b>: Transaction ID of the oldest [interesting] transaction (OIT)</li>
+      <li><b>oldest_active</b>: Transaction ID of the oldest active transaction (OAT)</li>
+      <li><b>isolation_mode</b>: Isolation mode (level): <br>0 - consistency (snapshot table stability) <br>1 - concurrency (snapshot) <br>2 - read committed record version <br>3 - read committed no record version</li>
+      <li><b>lock_timeout</b>: Lock timeout: <br>-1 - wait forever <br>0 - no waiting <br>1 or greater - lock timeout in seconds</li>
+      <li><b>read_only</b>: Flag indicating whether the transaction is read-only (value 1) or read-write (value 0)</li>
+      <li><b>auto_commit</b>: Flag indicating whether automatic commit is used for the transaction (value 1) or not (value 0)</li>
+      <li><b>auto_undo</b>: Flag indicating whether the logging mechanism automatic undo is used for the transaction (value 1) or not (value 0)</li>
+    </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>mon_statement</td><td>Displays statements prepared for execution:
+      <ul>
+        <li><b>attachment_id</b>: Connection identifier</li>
+        <li><b>transaction_id</b>: Transaction identifier</li>
+        <li><b>state</b>: Statement state: <br>0 - idle <br>1 - active <br>2 - stalled</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>mon_call_stack</td><td>Displays calls to the stack from queries executing in stored procedures and triggers:
+      <ul>
+        <li><b>statement_id</b>: The identifier of the top-level SQL statement, the one that initiated the chain of calls. Use this identifier to find the records about the active statement in the MON$STATEMENTS table</li>
+        <li><b>caller_id</b>: The identifier of the calling trigger or stored procedure</li>
+        <li><b>source_line</b>: The number of the source line in the SQL statement being executed at the moment of the snapshot</li>
+        <li><b>source_column</b>: The number of the source column in the SQL statement being executed at the moment of the snapshot</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>system_memory</td>
+    <td>
+      Information about device RAM:
+      <ul>
+        <li><b>used</b>: The amount of used memory by OS and other applications</li>
+        <li><b>available</b>: The amount of available memory</li>
+        <li><b>total</b>: The amount of memory which is had by device</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>system_cpu</td>
+    <td>
+      Information about cpu usage:
+      <ul>
+        <li><b>percent</b>: CPU load</li>
+        <li><b>frequency</b>: CPU frequency</li>
+      </ul>
+    </td>
+  </tr>
 </table>
 
 # Exporter configuration file
@@ -24,22 +110,26 @@ The example of required content is:
 {
   "port": 8000, 
   "login":  "SYSDBA", 
-  "password":  "masterkey", 
+  "password":  "masterkey",
+  "RDB_port": 3050,
   "databases": {
     "[db_nickname]": "localhost:[insert_path_to_database]",
     "[another_db_nickname]": "localhost:[insert_path_to_another_database]"
   }
-  "utilities": "[insert_path_to_folder_with_utilities]"
 }
 ```
-<p><strong>Path to utilities folder must contain next following binary files:</strong></p>
-<ul>
-  <li>gstat</li>
-  <li>isql</li>
-</ul>
 
 # Libraries
 You need to install next following libraries to make the exporter work:
 <ul>
-  <li><strong>psutil</strong> (pip install psutil)</li>
+  <li><strong>psutil</strong> version 5.9.4 (pip install psutil==5.9.4)</li>
+  <li><strong>firebirdsql</strong> version 1.2.2 (pip install firebirdsql==1.2.2)</li>
 </ul>
+
+# How to use
+<ol>
+  <li>Launch RDB server</li>
+  <li>Edit <a href="#exporter-configuration-file">exporter configuration file</a></li>
+  <li>Launch this exporter (python main.py)</li>
+  <li>Launch prometheus</li>
+</ol>
