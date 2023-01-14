@@ -184,11 +184,25 @@ class Handler(BaseHTTPRequestHandler):
             response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"source_column\"} %i\n" % (db_name, record[0], record[1], object_type, record[6])
         return response
 
+    def scrape_mon_replication(self, cursor, db_name) -> str:
+        cursor.execute("SELECT MON$TYPE, MON$ACTIVE, MON$WAITFLUSH_COUNT, MON$WAITFLUSH_TIME, MON$WAITFLUSH_TRANSFER, MON$BACKGROUND_COUNT, MON$BACKGROUND_TIME, MON$BACKGROUND_TRANSFER FROM MON$REPLICATION;")
+        response = ""
+        records = cursor.fetchall()
+        for record in records:
+            response += "mon_replication{database=\"%s\", type=\"type\"} %i" % (db_name, record[0])
+            response += "mon_replication{database=\"%s\", type=\"active\"} %i" % (db_name, record[1])
+            response += "mon_replication{database=\"%s\", type=\"waitflush_count\"} %i" % (db_name, record[2])
+            response += "mon_replication{database=\"%s\", type=\"waitflush_time\"} %i" % (db_name, record[3])
+            response += "mon_replication{database=\"%s\", type=\"waitflush_transfer\"} %i" % (db_name, record[4])
+            response += "mon_replication{database=\"%s\", type=\"background_count\"} %i" % (db_name, record[5])
+            response += "mon_replication{database=\"%s\", type=\"background_time\"} %i" % (db_name, record[6])
+            response += "mon_replication{database=\"%s\", type=\"background_transfer\"} %i" % (db_name, record[7])
+        return response
+
     def scrape_system_metrics(self) -> str:
         response = ""
         memory = psutil.virtual_memory()
         cpu_freq = psutil.cpu_freq()
-        disks = psutil.disk_io_counters()
         response += "system_memory{type=\"used\"} %i\n" % (memory.total - memory.available)
         response += "system_memory{type=\"available\"} %i\n" % memory.available
         response += "system_memory{type=\"total\"} %i\n" % memory.total
