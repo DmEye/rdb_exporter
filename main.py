@@ -62,7 +62,6 @@ class Handler(BaseHTTPRequestHandler):
         response = ""
         cursor = CONFIGURE["connections"][db_name].cursor()
         response += self.scrape_mon_database(cursor, db_name)
-        response += self.scrape_mon_replication(cursor, db_name)
         response += self.scrape_mon_attachments(cursor, db_name)
         response += self.scrape_mon_transactions(cursor, db_name)
         response += self.scrape_mon_statements(cursor, db_name)
@@ -185,21 +184,6 @@ class Handler(BaseHTTPRequestHandler):
             response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"caller_id\"} %i\n" % (db_name, record[0], record[1], object_type, record[4])
             response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"source_line\"} %i\n" % (db_name, record[0], record[1], object_type, record[5])
             response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"source_column\"} %i\n" % (db_name, record[0], record[1], object_type, record[6])
-        return response
-
-    def scrape_mon_replication(self, cursor, db_name) -> str:
-        cursor.execute("SELECT MON$TYPE, MON$ACTIVE, MON$WAITFLUSH_COUNT, MON$WAITFLUSH_TIME, MON$WAITFLUSH_TRANSFER, MON$BACKGROUND_COUNT, MON$BACKGROUND_TIME, MON$BACKGROUND_TRANSFER FROM MON$REPLICATION;")
-        response = ""
-        records = cursor.fetchall()
-        for record in records:
-            response += "mon_replication{database=\"%s\", type=\"type\"} %i\n" % (db_name, record[0])
-            response += "mon_replication{database=\"%s\", type=\"active\"} %i\n" % (db_name, record[1])
-            response += "mon_replication{database=\"%s\", type=\"waitflush_count\"} %i\n" % (db_name, record[2])
-            response += "mon_replication{database=\"%s\", type=\"waitflush_time\"} %i\n" % (db_name, record[3])
-            response += "mon_replication{database=\"%s\", type=\"waitflush_transfer\"} %i\n" % (db_name, record[4])
-            response += "mon_replication{database=\"%s\", type=\"background_count\"} %i\n" % (db_name, record[5])
-            response += "mon_replication{database=\"%s\", type=\"background_time\"} %i\n" % (db_name, record[6])
-            response += "mon_replication{database=\"%s\", type=\"background_transfer\"} %i\n" % (db_name, record[7])
         return response
 
     def scrape_mon_record_stats(self, cursor, db_name) -> str:
