@@ -62,12 +62,15 @@ class Handler(BaseHTTPRequestHandler):
         response = ""
         cursor = CONFIGURE["connections"][db_name].cursor()
         response += self.scrape_mon_database(cursor, db_name)
+        response += self.scrape_mon_replication(cursor, db_name)
         response += self.scrape_mon_attachments(cursor, db_name)
         response += self.scrape_mon_transactions(cursor, db_name)
         response += self.scrape_mon_statements(cursor, db_name)
         response += self.scrape_mon_io_stats(cursor, db_name)
         response += self.scrape_mon_memory_usage(cursor, db_name)
         response += self.scrape_mon_call_stack(cursor, db_name)
+        response += self.scrape_mon_record_stats(cursor, db_name)
+        response += self.scrape_mon_table_stats(cursor, db_name)
         response += self.scrape_db_size(CONFIGURE["databasese"][db_name], db_name)
 
         cursor.close()
