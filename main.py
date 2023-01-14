@@ -221,6 +221,14 @@ class Handler(BaseHTTPRequestHandler):
             response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_rpt_reads\"} %i\n" % (db_name, stat[0], group, stat[15])
         return response
 
+    def scrape_mon_table_stats(self, cursor, db_name) -> str:
+        cursor.execute("SELECT MON$STAT_ID, MON$STAT_GROUP, MON$TABLE_NAME, MON$RECORD_STAT_ID FROM MON$TABLE_STATS;")
+        response = ""
+        table_stats = cursor.fetchall()
+        for stat in table_stats:
+            response += "mon_table_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", table=\"%s\"} %i\n" % (db_name, stat[0], decode_group(stat[1]), stat[2], stat[3])
+        return response
+
     def scrape_system_metrics(self) -> str:
         response = ""
         memory = psutil.virtual_memory()
