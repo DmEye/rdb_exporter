@@ -70,7 +70,7 @@ class Handler(BaseHTTPRequestHandler):
         response += self.scrape_mon_call_stack(cursor, db_name)
         response += self.scrape_mon_record_stats(cursor, db_name)
         response += self.scrape_mon_table_stats(cursor, db_name)
-        response += self.scrape_db_size(CONFIGURE["databasese"][db_name], db_name)
+        response += self.scrape_db_size(CONFIGURE["databases"][db_name], db_name)
 
         cursor.close()
         return response
