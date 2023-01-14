@@ -189,14 +189,36 @@ class Handler(BaseHTTPRequestHandler):
         response = ""
         records = cursor.fetchall()
         for record in records:
-            response += "mon_replication{database=\"%s\", type=\"type\"} %i" % (db_name, record[0])
-            response += "mon_replication{database=\"%s\", type=\"active\"} %i" % (db_name, record[1])
-            response += "mon_replication{database=\"%s\", type=\"waitflush_count\"} %i" % (db_name, record[2])
-            response += "mon_replication{database=\"%s\", type=\"waitflush_time\"} %i" % (db_name, record[3])
-            response += "mon_replication{database=\"%s\", type=\"waitflush_transfer\"} %i" % (db_name, record[4])
-            response += "mon_replication{database=\"%s\", type=\"background_count\"} %i" % (db_name, record[5])
-            response += "mon_replication{database=\"%s\", type=\"background_time\"} %i" % (db_name, record[6])
-            response += "mon_replication{database=\"%s\", type=\"background_transfer\"} %i" % (db_name, record[7])
+            response += "mon_replication{database=\"%s\", type=\"type\"} %i\n" % (db_name, record[0])
+            response += "mon_replication{database=\"%s\", type=\"active\"} %i\n" % (db_name, record[1])
+            response += "mon_replication{database=\"%s\", type=\"waitflush_count\"} %i\n" % (db_name, record[2])
+            response += "mon_replication{database=\"%s\", type=\"waitflush_time\"} %i\n" % (db_name, record[3])
+            response += "mon_replication{database=\"%s\", type=\"waitflush_transfer\"} %i\n" % (db_name, record[4])
+            response += "mon_replication{database=\"%s\", type=\"background_count\"} %i\n" % (db_name, record[5])
+            response += "mon_replication{database=\"%s\", type=\"background_time\"} %i\n" % (db_name, record[6])
+            response += "mon_replication{database=\"%s\", type=\"background_transfer\"} %i\n" % (db_name, record[7])
+        return response
+
+    def scrape_mon_record_stats(self, cursor, db_name) -> str:
+        cursor.execute("SELECT MON$STAT_ID, MON$STAT_GROUP, MON$RECORD_SEQ_READS, MON$RECORD_IDX_READS, MON$RECORD_INSERTS, MON$RECORD_UPDATES, MON$RECORD_DELETES, MON$RECORD_BACKOUTS, MON$RECORD_PURGES, MON$RECORD_EXPUNGES, MON$RECORD_LOCKS, MON$RECORD_WAITS, MON$RECORD_CONFLICTS, MON$BACKVERSION_READS, MON$FRAGMENT_READS, MON$RECORD_RPT_READS FROM MON$RECORD_STATS")
+        response = ""
+        record_stats = cursor.fetchall()
+        for stat in record_stats:
+            group = decode_group(stat[1])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_seq_reads\"} %i\n" % (db_name, stat[0], group, stat[2])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_idx_reads\"} %i\n" % (db_name, stat[0], group, stat[3])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_inserts\"} %i\n" % (db_name, stat[0], group, stat[4])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_updates\"} %i\n" % (db_name, stat[0], group, stat[5])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_deletes\"} %i\n" % (db_name, stat[0], group, stat[6])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_backouts\"} %i\n" % (db_name, stat[0], group, stat[7])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_purges\"} %i\n" % (db_name, stat[0], group, stat[8])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_expunges\"} %i\n" % (db_name, stat[0], group, stat[9])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_locks\"} %i\n" % (db_name, stat[0], group, stat[10])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_waits\"} %i\n" % (db_name, stat[0], group, stat[11])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_conflicts\"} %i\n" % (db_name, stat[0], group, stat[12])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"backversion_reads\"} %i\n" % (db_name, stat[0], group, stat[13])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"fragment_reads\"} %i\n" % (db_name, stat[0], group, stat[14])
+            response += "mon_record_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", type=\"record_rpt_reads\"} %i\n" % (db_name, stat[0], group, stat[15])
         return response
 
     def scrape_system_metrics(self) -> str:
