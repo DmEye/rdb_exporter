@@ -112,6 +112,7 @@ The example of required content is:
   "login":  "SYSDBA", 
   "password":  "masterkey",
   "RDB_port": 3050,
+  "utilities": "/opt/RedDatabase/bin"
   "databases": {
     "[db_nickname]": "localhost:[insert_path_to_database]",
     "[another_db_nickname]": "localhost:[insert_path_to_another_database]"
