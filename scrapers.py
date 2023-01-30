@@ -1,14 +1,20 @@
 import os.path
 import psutil
 import subprocess
+import datetime
 from tools import *
 
 
-def scrape_db_size(path_to_database, db_name) -> str:
+def scrape_db_size(path_to_database, cursor, db_name) -> str:
     db_size_in_bytes = 0
     path_to_db = path_to_database.split(':')[1]
     if os.path.exists(path_to_db):
         db_size_in_bytes = os.path.getsize(path_to_db)
+    else:
+        cursor.execute("SELECT MON$DATABASE_NAME FROM MON$DATABASE;")
+        path_to_db = cursor.fetchone()[0]
+        if os.path.exists(path_to_db):
+            db_size_in_bytes = os.path.getsize(path_to_db)
     return "db_size{database=\"%s\"} %i\n" % (db_name, db_size_in_bytes)
 
 
@@ -30,24 +36,29 @@ def scrape_mon_database(cursor, db_name) -> str:
         response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"crypt_page\"} %i\n" % (db_name, database[0], database[11])
         response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"oldest_transaction\"} %i\n" % (db_name, database[0], database[12])
         response += "mon_database{database=\"%s\", stat_id=\"%i\", type=\"oldest_active\"} %i\n" % (db_name, database[0], database[13])
-    response += "diff_oldt_nt{database=\"%s\"} %i\n" % (db_name, databases[0][2] - databases[0][12])
     return response
 
 
 def scrape_mon_attachments(cursor, db_name) -> str:
-    cursor.execute("SELECT MON$STAT_ID, MON$ATTACHMENT_ID, MON$SERVER_PID, MON$STATE, MON$REMOTE_PID, MON$CHARACTER_SET_ID, MON$GARBAGE_COLLECTION, MON$SYSTEM_FLAG, MON$REPL_WAITFLUSH_COUNT, MON$REPL_WAITFLUSH_TIME FROM MON$ATTACHMENTS;")
+    cursor.execute("SELECT MON$STAT_ID, MON$ATTACHMENT_ID, MON$SERVER_PID, MON$STATE, MON$REMOTE_PID, MON$CHARACTER_SET_ID, MON$GARBAGE_COLLECTION, MON$SYSTEM_FLAG, MON$REPL_WAITFLUSH_COUNT, MON$REPL_WAITFLUSH_TIME, MON$TIMESTAMP, MON$REMOTE_ADDRESS, MON$REMOTE_PROCESS FROM MON$ATTACHMENTS;")
     response = ""
     active_users = 0
     attachments = cursor.fetchall()
     for attachment in attachments:
-        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"server_pid\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[2])
-        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"state\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[3])
-        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"remote_pid\"} %i\n" % (db_name, attachment[0], attachment[1], 0 if attachment[4] is None else attachment[4])
-        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"character_set_id\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[5])
-        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"garbage_collection\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[6])
-        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"system_flag\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[7])
-        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"repl_waitflush_count\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[8])
-        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", type=\"repl_waitflush_time\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[9])
+        seconds_gone = 0
+        if not attachment[10] is None:
+            time_zone = attachment[10].tzinfo
+            current_time = datetime.datetime.now(time_zone)
+            seconds_gone = (current_time - attachment[10]).total_seconds()
+        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", remote_address=\"%s\", remote_process=\"%s\", type=\"server_pid\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[11], attachment[12], attachment[2])
+        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", remote_address=\"%s\", remote_process=\"%s\", type=\"state\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[11], attachment[12], attachment[3])
+        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", remote_address=\"%s\", remote_process=\"%s\", type=\"remote_pid\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[11], attachment[12], check_none(attachment[4], 0))
+        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", remote_address=\"%s\", remote_process=\"%s\", type=\"character_set_id\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[11], attachment[12], attachment[5])
+        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", remote_address=\"%s\", remote_process=\"%s\", type=\"garbage_collection\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[11], attachment[12], attachment[6])
+        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", remote_address=\"%s\", remote_process=\"%s\", type=\"system_flag\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[11], attachment[12], attachment[7])
+        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", remote_address=\"%s\", remote_process=\"%s\", type=\"repl_waitflush_count\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[11], attachment[12], attachment[8])
+        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", remote_address=\"%s\", remote_process=\"%s\", type=\"repl_waitflush_time\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[11], attachment[12], attachment[9])
+        response += "mon_attachment{database=\"%s\", stat_id=\"%i\", attachment_id=\"%i\", remote_address=\"%s\", remote_process=\"%s\", type=\"deltatime\"} %i\n" % (db_name, attachment[0], attachment[1], attachment[11], attachment[12], seconds_gone)
         if attachment[3] == 1:
             active_users += 1
     response += "active_users{database=\"%s\"} %i\n" % (db_name, active_users)
@@ -56,20 +67,25 @@ def scrape_mon_attachments(cursor, db_name) -> str:
 
 
 def scrape_mon_transactions(cursor, db_name) -> str:
-    cursor.execute("SELECT MON$STAT_ID, MON$TRANSACTION_ID, MON$ATTACHMENT_ID, MON$STATE, MON$TOP_TRANSACTION, MON$OLDEST_TRANSACTION, MON$OLDEST_ACTIVE, MON$ISOLATION_MODE, MON$LOCK_TIMEOUT, MON$READ_ONLY, MON$AUTO_COMMIT, MON$AUTO_UNDO FROM MON$TRANSACTIONS")
+    cursor.execute("SELECT MON$STAT_ID, MON$TRANSACTION_ID, MON$ATTACHMENT_ID, MON$STATE, MON$TOP_TRANSACTION, MON$OLDEST_TRANSACTION, MON$OLDEST_ACTIVE, MON$ISOLATION_MODE, MON$LOCK_TIMEOUT, MON$READ_ONLY, MON$AUTO_COMMIT, MON$AUTO_UNDO, MON$TIMESTAMP FROM MON$TRANSACTIONS")
     response = ""
     transactions = cursor.fetchall()
     for transaction in transactions:
-        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"attachment_id\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2])
-        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"state\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[3])
-        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"top_transaction\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[4])
-        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"oldest_transaction\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[5])
-        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"oldest_active\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[6])
-        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"isolation_mode\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[7])
-        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"lock_timeout\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[8])
-        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"read_only\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[9])
-        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"auto_commit\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[10])
-        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", type=\"auto_undo\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[11])
+        seconds_gone = 0
+        if not transaction[12] is None:
+            time_zone = transaction[12].tzinfo
+            current_time = datetime.datetime.now(time_zone)
+            seconds_gone = (current_time - transaction[12]).total_seconds()
+        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", attachment_id=\"%i\", type=\"state\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2], transaction[3])
+        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", attachment_id=\"%i\", type=\"top_transaction\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2], transaction[4])
+        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", attachment_id=\"%i\", type=\"oldest_transaction\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2], transaction[5])
+        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", attachment_id=\"%i\", type=\"oldest_active\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2], transaction[6])
+        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", attachment_id=\"%i\", type=\"isolation_mode\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2], transaction[7])
+        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", attachment_id=\"%i\", type=\"lock_timeout\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2], transaction[8])
+        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", attachment_id=\"%i\", type=\"read_only\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2], transaction[9])
+        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", attachment_id=\"%i\", type=\"auto_commit\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2], transaction[10])
+        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", attachment_id=\"%i\", type=\"auto_undo\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2], transaction[11])
+        response += "mon_transaction{database=\"%s\", stat_id=\"%i\", transaction_id=\"%i\", attachment_id=\"%i\", type=\"deltatime\"} %i\n" % (db_name, transaction[0], transaction[1], transaction[2], seconds_gone)
     return response
 
 
@@ -93,13 +109,17 @@ def scrape_transactions_params(path_to_gstat, path_to_database, db_name) -> str:
 
 
 def scrape_mon_statements(cursor, db_name) -> str:
-    cursor.execute("SELECT MON$STAT_ID, MON$STATEMENT_ID, MON$ATTACHMENT_ID, MON$TRANSACTION_ID, MON$STATE FROM MON$STATEMENTS")
+    cursor.execute("SELECT MON$STAT_ID, MON$STATEMENT_ID, MON$ATTACHMENT_ID, MON$TRANSACTION_ID, MON$STATE, MON$TIMESTAMP FROM MON$STATEMENTS")
     response = ""
     statements = cursor.fetchall()
     for statement in statements:
-        response += "mon_statement{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", type=\"attachment_id\"} %i\n" % (db_name, statement[0], statement[1], statement[2])
-        response += "mon_statement{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", type=\"transaction_id\"} %i\n" % (db_name, statement[0], statement[1], -1 if statement[3] is None else statement[3])
-        response += "mon_statement{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", type=\"state\"} %i\n" % (db_name, statement[0], statement[1], statement[4])
+        seconds_gone = 0
+        if not statement[5] is None:
+            time_zone = statement[5].tzinfo
+            current_time = datetime.datetime.now(time_zone)
+            seconds_gone = (current_time - statement[5]).total_seconds()
+        response += "mon_statement{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", attachment_id=\"%i\", transaction_id=\"%i\", type=\"state\"} %i\n" % (db_name, statement[0], statement[1], statement[2], statement[3], statement[4])
+        response += "mon_statement{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", attachment_id=\"%i\", transaction_id=\"%i\", type=\"deltatime\"} %i\n" % (db_name, statement[0], statement[1], statement[2], statement[3], seconds_gone)
     return response
 
 
@@ -130,15 +150,20 @@ def scrape_mon_memory_usage(cursor, db_name) -> str:
 
 
 def scrape_mon_call_stack(cursor, db_name) -> str:
-    cursor.execute("SELECT MON$STAT_ID, MON$CALL_ID, MON$OBJECT_TYPE, MON$STATEMENT_ID, MON$CALLER_ID, MON$SOURCE_LINE, MON$SOURCE_COLUMN FROM MON$CALL_STACK")
+    cursor.execute("SELECT MON$STAT_ID, MON$CALL_ID, MON$OBJECT_TYPE, MON$STATEMENT_ID, MON$CALLER_ID, MON$SOURCE_LINE, MON$SOURCE_COLUMN, MON$TIMESTAMP FROM MON$CALL_STACK")
     response = ""
     data = cursor.fetchall()
     for record in data:
         object_type = decode_call_object_type(record[2])
-        response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"statement_id\"} %i\n" % (db_name, record[0], record[1], object_type, record[3])
-        response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"caller_id\"} %i\n" % (db_name, record[0], record[1], object_type, record[4])
-        response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"source_line\"} %i\n" % (db_name, record[0], record[1], object_type, record[5])
-        response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", type=\"source_column\"} %i\n" % (db_name, record[0], record[1], object_type, record[6])
+        seconds_gone = 0
+        if not record[7] is None:
+            time_zone = record[7].tzinfo
+            current_time = datetime.datetime.now(time_zone)
+            seconds_gone = (current_time - record[7]).total_seconds()
+        response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", statement_id=\"%i\", type=\"caller_id\"} %i\n" % (db_name, record[0], record[1], object_type, record[3],  check_none(record[5]))
+        response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", statement_id=\"%i\", type=\"source_line\"} %i\n" % (db_name, record[0], record[1], object_type, record[3], record[5])
+        response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", statement_id=\"%i\", type=\"source_column\"} %i\n" % (db_name, record[0], record[1], object_type, record[3], record[6])
+        response += "mon_call_stack{database=\"%s\", stat_id=\"%i\", call_id=\"%i\", object_type=\"%s\", statement_id=\"%i\", type=\"deltatime\"} %i\n" % (db_name, record[0], record[1], object_type, record[3], seconds_gone)
     return response
 
 

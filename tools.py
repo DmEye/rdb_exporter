@@ -24,3 +24,7 @@ def decode_group(code):
         return "cached_query"
     else:
         return "Unknown"
+
+
+def check_none(to_check, default=-1) -> int:
+    return default if to_check is None else to_check
