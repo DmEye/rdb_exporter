@@ -120,6 +120,19 @@ The example of required content is:
 }
 ```
 
+# Prometheus configuration file
+Prometheus can be configured from either a terminal and a configuration file. The most important settings are from which node prometheus scrapes metrics and time between two scrape queries.
+The example content of prometheus configuration file:
+```
+global:
+  scrape_interval: 10s # Time between two scrape queries
+
+scrape_configs:
+  - job_name: "RedDatabases"
+    static_configs:
+      - targets: ["localhost:8000"] # A node where exporter is located
+```
+
 # Libraries
 You need to install next following libraries to make the exporter work:
 <ul>
@@ -129,8 +142,16 @@ You need to install next following libraries to make the exporter work:
 
 # How to use
 <ol>
-  <li>Launch RDB server</li>
-  <li>Edit <a href="#exporter-configuration-file">exporter configuration file</a></li>
-  <li>Launch this exporter (python main.py)</li>
-  <li>Launch prometheus</li>
+  <li>Install python, <a href="#libraries">libraries</a>, Prometheus, Grafana, Exporter;</li>
+  <li>Launch RedDatabase server;</li>
+  <li>Edit <a href="#exporter-configuration-file">exporter configuration file</a>;</li>
+  <li>Launch this exporter (python main.py);</li>
+  <li>Edit <a href="#prometheus-configuration-file">Prometheus configuration file</a>;</li>
+  <li>Launch prometheus;</li>
+  <li>Launch Grafana (on linux: <i>sudo systemctl start grafana-server</i>). It might be on 3000 port now;</li>
+  <li>Open browser and insert into address section the next following string "http://localhost:3000/";</li>
+  <li>Enter login and password to sign in. The string "admin" is default login and password. Grafana make you change default password when you have signed in for the first time;</li>
+  <li>Make a data source. To do it you must go to left side of screen and find a gear picture (configure section) then click on the "Data sources" subsection. Now click the button "add data source, select Prometheus, insert url path to prometheus (default is "<b>http://localhost:9090/</b>")", click the button "Save & test";</li>
+  <li>Import dashboards or build your own. To import dashboards you must find the "Dashboards" section at the left side of the screen and click the "+ Import" button. Click the button "Upload JSON file" and select json file of a dashboard, click "Import". To build your own dashboard follow instructions at <a href="https://grafana.com/docs/grafana/latest/getting-started/build-first-dashboard/">Grafana official site</a>.</li>
 </ol>
+Congratulations! Use dashboards to watch your RedDatabase.
