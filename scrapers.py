@@ -195,7 +195,7 @@ def scrape_mon_table_stats(cursor, db_name) -> str:
     response = ""
     table_stats = cursor.fetchall()
     for stat in table_stats:
-        response += "mon_table_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", table=\"%s\"} %i\n" % (db_name, stat[0], decode_group(stat[1]), stat[2], stat[3])
+        response += "mon_table_stats{database=\"%s\", stat_id=\"%i\", stat_group=\"%s\", table=\"%s\"} 1\n" % (db_name, stat[3], decode_group(stat[1]), stat[2])
     return response
 
 
