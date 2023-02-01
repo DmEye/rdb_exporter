@@ -1,35 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__elements": {},
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "9.3.2"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "table",
-      "name": "Table",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -55,14 +24,14 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 2,
   "links": [],
   "liveNow": false,
   "panels": [
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "HDm87Qo4z"
       },
       "description": "Спсиок в порядке убывания времени выполнения транзакций",
       "fieldConfig": {
@@ -216,7 +185,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "HDm87Qo4z"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -234,7 +203,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "HDm87Qo4z"
       },
       "description": "Спсиок в порядке убывания времени выполнения транзакций",
       "fieldConfig": {
@@ -387,7 +356,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "HDm87Qo4z"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -405,7 +374,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "HDm87Qo4z"
       },
       "description": "Спсиок в порядке убывания времени выполнения транзакций",
       "fieldConfig": {
@@ -558,7 +527,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "HDm87Qo4z"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -576,7 +545,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "HDm87Qo4z"
       },
       "description": "Спсиок в порядке убывания времени выполнения транзакций",
       "fieldConfig": {
@@ -713,7 +682,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "HDm87Qo4z"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -736,10 +705,14 @@
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {
+          "selected": false,
+          "text": "data",
+          "value": "data"
+        },
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "HDm87Qo4z"
         },
         "definition": "label_values(database)",
         "hide": 0,
@@ -759,10 +732,14 @@
         "type": "query"
       },
       {
-        "current": {},
+        "current": {
+          "selected": false,
+          "text": "localhost:8000",
+          "value": "localhost:8000"
+        },
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "HDm87Qo4z"
         },
         "definition": "label_values(instance)",
         "hide": 0,

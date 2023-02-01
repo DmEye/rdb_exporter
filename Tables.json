@@ -1,0 +1,326 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 3,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "HDm87Qo4z"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 10,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "pluginVersion": "9.3.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "HDm87Qo4z"
+          },
+          "editorMode": "code",
+          "expr": "mon_record_stats{database=\"$database\", instance=\"$instance\", type=\"record_deletes\", stat_group=\"database\"} * on (database, instance, stat_id) group_left(table) mon_table_stats{database=\"$database\", instance=\"$instance\", table=\"$table\", stat_group=\"database\"}",
+          "legendFormat": "Удалено",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "HDm87Qo4z"
+          },
+          "editorMode": "code",
+          "expr": "mon_record_stats{database=\"$database\", instance=\"$instance\", type=\"record_inserts\", stat_group=\"database\"} * on (database, instance, stat_id) group_left(table) mon_table_stats{database=\"$database\", instance=\"$instance\", table=\"$table\", stat_group=\"database\"}",
+          "hide": false,
+          "legendFormat": "Вставлено",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "HDm87Qo4z"
+          },
+          "editorMode": "code",
+          "expr": "mon_record_stats{database=\"$database\", instance=\"$instance\", type=\"record_updates\", stat_group=\"database\"} * on (database, instance, stat_id) group_left(table) mon_table_stats{database=\"$database\", instance=\"$instance\", table=\"$table\", stat_group=\"database\"}",
+          "hide": false,
+          "legendFormat": "Изменено",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Удалено, изменено, записано в $table",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "HDm87Qo4z"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 10,
+        "x": 0,
+        "y": 7
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "9.3.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "HDm87Qo4z"
+          },
+          "editorMode": "code",
+          "expr": "mon_record_stats{database=\"$database\", instance=\"$instance\", type=\"record_idx_reads\", stat_group=\"database\"} * on (database, instance, stat_id) group_left(table) mon_table_stats{database=\"$database\", instance=\"$instance\", table=\"$table\", stat_group=\"database\"}",
+          "legendFormat": "Прочитано с помощью индекса",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "HDm87Qo4z"
+          },
+          "editorMode": "code",
+          "expr": "mon_record_stats{database=\"$database\", instance=\"$instance\", type=\"record_seq_reads\", stat_group=\"database\"} * on (database, instance, stat_id) group_left(table) mon_table_stats{database=\"$database\", instance=\"$instance\", table=\"$table\", stat_group=\"database\"}",
+          "hide": false,
+          "legendFormat": "Прочитано последовательно",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Последовательно/индексное чтение $table",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 37,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "test",
+          "value": "test"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "HDm87Qo4z"
+        },
+        "definition": "label_values(database)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Database",
+        "multi": false,
+        "name": "database",
+        "options": [],
+        "query": {
+          "query": "label_values(database)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "localhost:8000",
+          "value": "localhost:8000"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "HDm87Qo4z"
+        },
+        "definition": "label_values(instance)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Node",
+        "multi": false,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "RDB$FIELDS",
+          "value": "RDB$FIELDS"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "HDm87Qo4z"
+        },
+        "definition": "label_values(mon_table_stats, table)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Tables",
+        "multi": false,
+        "name": "table",
+        "options": [],
+        "query": {
+          "query": "label_values(mon_table_stats, table)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Tables",
+  "uid": "JwAQ_WAVk",
+  "version": 4,
+  "weekStart": ""
+}
