@@ -1,3 +1,4 @@
+
 import json
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
@@ -27,6 +28,7 @@ def scrape(db_name) -> str:
     response += scrape_mon_table_stats(cursor, db_name)
     response += scrape_transactions_params(CONFIGURE["utilities"]["gstat"], CONFIGURE["databases"][db_name], db_name)
     response += scrape_db_size(CONFIGURE["databases"][db_name], cursor, db_name)
+    response += scrape_trace(CONFIGURE["trace"], db_name)
 
     cursor.close()
     return response

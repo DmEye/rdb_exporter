@@ -1,3 +1,4 @@
+import re
 import os.path
 import psutil
 import subprocess
@@ -216,4 +217,30 @@ def scrape_system_metrics(CONFIGURE) -> str:
             response += "system_disks{disk=\"%s\", type=\"used\"} %i\n" % (mp, usage.used)
             response += "system_disks{disk=\"%s\", type=\"free\"} %i\n" % (mp, usage.free)
 
+    return response
+
+
+def scrape_trace(path_to_trace, db_name) -> str:
+    with open(path_to_trace, 'r') as file:
+        data = file.read()
+    fails = 0
+    OK = 0
+    fails_execute_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) FAILED EXECUTE_STATEMENT_FINISH', data, re.M)
+    fails_prepare_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) FAILED PREPARE_STATEMENT', data, re.M)
+    fails_unauth_execute_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) UNAUTHORIZED EXECUTE_STATEMENT_FINISH', data, re.M)
+    fails_unauth_prepare_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) UNAUTHORIZED PREPARE_STATEMENT', data, re.M)
+    finish_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) EXECUTE_STATEMENT_FINISH', data, re.M)
+    if not fails_execute_strings is None:
+        fails += len(fails_execute_strings)
+    if not fails_prepare_strings is None:
+        fails += len(fails_prepare_strings)
+    if not fails_unauth_execute_strings is None:
+        fails += len(fails_unauth_execute_strings)
+    if not fails_unauth_prepare_strings is None:
+        fails += len(fails_unauth_prepare_strings)
+    if not finish_strings is None:
+        OK += len(finish_strings)
+    response = ""
+    response += "trace_statements{database=\"%s\", type=\"OK\"} %i\n" % (db_name, OK)
+    response += "trace_statements{database=\"%s\", type=\"FAIL\"} %i\n" % (db_name, fails)
     return response
