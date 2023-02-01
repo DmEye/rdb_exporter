@@ -103,7 +103,7 @@ This is a prometheus exporter for DBMS "Red Database".
 </table>
 
 # Exporter configuration file
-You need to add a configuration json file beside "main.py" file and name it <strong>"exporter_conf"</strong> and fill it with a content.
+You need to add a configuration json file beside "main.py" file and name it <strong>"exporter_conf"</strong> and fill it with a content. (Field "trace" is reqired)
 <br>
 The example of required content is:
 ```
@@ -116,7 +116,8 @@ The example of required content is:
   "databases": {
     "[db_nickname]": "localhost:[insert_path_to_database]",
     "[another_db_nickname]": "localhost:[insert_path_to_another_database]"
-  }
+  },
+  "trace": "[insert_path_to_fdbtrace_text]"
 }
 ```
 
