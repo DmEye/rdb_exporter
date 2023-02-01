@@ -100,6 +100,16 @@ This is a prometheus exporter for DBMS "Red Database".
       </ul>
     </td>
   </tr>
+  <tr>
+    <td>trace_statements</td>
+    <td>
+      Shows amount of failed and successful statements:
+      <ul>
+        <li><b>OK</b>: amount of successful statements</li>
+        <li><b>FAIL</b>: amount of failed statements</li>
+      </ul>
+    </td>
+  </tr>
 </table>
 
 # Exporter configuration file
