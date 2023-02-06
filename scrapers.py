@@ -230,6 +230,9 @@ def scrape_trace(path_to_trace, db_name) -> str:
     fails_unauth_execute_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) UNAUTHORIZED EXECUTE_STATEMENT_FINISH', data, re.M)
     fails_unauth_prepare_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) UNAUTHORIZED PREPARE_STATEMENT', data, re.M)
     finish_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) EXECUTE_STATEMENT_FINISH', data, re.M)
+    times = re.findall(r'(?:FAILED|UNAUTHORIZED)*\s?(?:EXECUTE_STATEMENT_FINISH|PREPARE_STATEMENT).*?\s+(\d+) ms', data, re.S)
+    times = sum(map(int, times))
+
     if not fails_execute_strings is None:
         fails += len(fails_execute_strings)
     if not fails_prepare_strings is None:
@@ -243,4 +246,5 @@ def scrape_trace(path_to_trace, db_name) -> str:
     response = ""
     response += "trace_statements{database=\"%s\", type=\"OK\"} %i\n" % (db_name, OK)
     response += "trace_statements{database=\"%s\", type=\"FAIL\"} %i\n" % (db_name, fails)
+    response += "trace_statements{database=\"%s\", type=\"time\"} %i\n" % (db_name, times)
     return response
