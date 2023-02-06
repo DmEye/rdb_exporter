@@ -119,8 +119,8 @@ def scrape_mon_statements(cursor, db_name) -> str:
             time_zone = statement[5].tzinfo
             current_time = datetime.datetime.now(time_zone)
             seconds_gone = (current_time - statement[5]).total_seconds()
-        response += "mon_statement{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", attachment_id=\"%i\", transaction_id=\"%i\", type=\"state\"} %i\n" % (db_name, statement[0], statement[1], statement[2], statement[3], statement[4])
-        response += "mon_statement{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", attachment_id=\"%i\", transaction_id=\"%i\", type=\"deltatime\"} %i\n" % (db_name, statement[0], statement[1], statement[2], statement[3], seconds_gone)
+        response += "mon_statement{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", attachment_id=\"%i\", transaction_id=\"%i\", type=\"state\"} %i\n" % (db_name, statement[0], check_none(statement[1]), check_none(statement[2]), check_none(statement[3]), check_none(statement[4]))
+        response += "mon_statement{database=\"%s\", stat_id=\"%i\", statement_id=\"%i\", attachment_id=\"%i\", transaction_id=\"%i\", type=\"deltatime\"} %i\n" % (db_name, statement[0], check_none(statement[1]), check_none(statement[2]), check_none(statement[3]), seconds_gone)
     return response
 
 
