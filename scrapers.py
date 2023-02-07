@@ -225,24 +225,17 @@ def scrape_trace(path_to_trace, db_name) -> str:
         data = file.read()
     fails = 0
     OK = 0
-    fails_execute_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) FAILED EXECUTE_STATEMENT_FINISH', data, re.M)
-    fails_prepare_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) FAILED PREPARE_STATEMENT', data, re.M)
-    fails_unauth_execute_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) UNAUTHORIZED EXECUTE_STATEMENT_FINISH', data, re.M)
-    fails_unauth_prepare_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) UNAUTHORIZED PREPARE_STATEMENT', data, re.M)
-    finish_strings = re.findall(r'^\d{4}-\d{2}-\d{2}T.*\) EXECUTE_STATEMENT_FINISH', data, re.M)
-    times = re.findall(r'(?:FAILED|UNAUTHORIZED)*\s?(?:EXECUTE_STATEMENT_FINISH|PREPARE_STATEMENT).*?\s+(\d+) ms', data, re.S)
-    times = sum(map(int, times))
+    times = 0
+    statements = re.findall(r'(FAILED|UNAUTHORIZED)*\s?(EXECUTE_STATEMENT_FINISH|PREPARE_STATEMENT).*?\s+(\d+) ms', data, re.S)
+    for statement in statements:
+        failed = statement[0] == "FAILED" or statement[0] == "UNAUTHORIZED"
+        if statement[2] != '':
+            times += int(statement[2])
+        if failed:
+            fails += 1
+        elif statement[1] == 'EXECUTE_STATEMENT_FINISH':
+            OK += 1
 
-    if not fails_execute_strings is None:
-        fails += len(fails_execute_strings)
-    if not fails_prepare_strings is None:
-        fails += len(fails_prepare_strings)
-    if not fails_unauth_execute_strings is None:
-        fails += len(fails_unauth_execute_strings)
-    if not fails_unauth_prepare_strings is None:
-        fails += len(fails_unauth_prepare_strings)
-    if not finish_strings is None:
-        OK += len(finish_strings)
     response = ""
     response += "trace_statements{database=\"%s\", type=\"OK\"} %i\n" % (db_name, OK)
     response += "trace_statements{database=\"%s\", type=\"FAIL\"} %i\n" % (db_name, fails)
