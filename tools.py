@@ -28,3 +28,7 @@ def decode_group(code):
 
 def check_none(to_check, default=-1) -> int:
     return default if to_check is None else to_check
+
+
+def make_prometheus_response(metric_name: str, labels: dict, value):
+    return "%s{%s} %i\n" % (metric_name, ",".join([f"{label_name}=\"{label_value}\"" for label_name, label_value in labels.items()]), check_none(value))
