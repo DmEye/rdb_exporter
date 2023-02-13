@@ -26,7 +26,7 @@ def scrape(db_name) -> str:
     response += scrape_mon_call_stack(cursor, db_name)
     response += scrape_mon_record_stats(cursor, db_name)
     response += scrape_mon_table_stats(cursor, db_name)
-    response += scrape_transactions_params(CONFIGURE["utilities"]["gstat"], CONFIGURE["databases"][db_name], db_name)
+    response += scrape_transactions_params(CONFIGURE["RedDatabase"]["bin"]["gstat"], CONFIGURE["databases"][db_name], db_name)
     response += scrape_db_size(CONFIGURE["databases"][db_name], cursor, db_name)
     response += scrape_trace(CONFIGURE["trace"], db_name)
 
@@ -67,22 +67,38 @@ if __name__ == "__main__":
         CONFIGURE = json.loads("".join(list(map(lambda line: line.replace("\n", ""), file.readlines()))))
 
     # Editing
-    utilities_path = CONFIGURE["utilities"]
+    rdb_path = CONFIGURE["RedDatabase"]
     if platform == "linux" or platform == "linux2":
-        if utilities_path[-1] != "/":
-            utilities_path += "/"
-        CONFIGURE["utilities"] = {
-            "gstat": utilities_path + "gstat",
-            "isql": utilities_path + "isql"
+        if rdb_path[-1] != "/":
+            rdb_path += "/"
+        CONFIGURE["RedDatabase"] = {
+            "gstat": rdb_path + "bin/gstat",
+            "isql": rdb_path + "bin/isql",
+            "trace_conf": rdb_path + "fbtrace.conf"
         }
         CONFIGURE["mountpoints"] = [disk.mountpoint for disk in psutil.disk_partitions()]
     elif platform == "win32":
-        if utilities_path[-1] != "\\":
-            utilities_path += "\\"
-        CONFIGURE["utilities"] = {
-            "gstat": utilities_path + "gstat.exe",
-            "isql": utilities_path + "isql.exe"
+        if rdb_path[-1] != "\\":
+            rdb_path += "\\"
+        CONFIGURE["RedDatabase"] = {
+            "gstat": rdb_path + "gstat.exe",
+            "isql": rdb_path + "isql.exe",
+            "trace_conf": rdb_path + "fbtrace.conf"
         }
+    else:
+        print("This OS is not supported")
+        exit(1)
+
+    # Reading trace configuration
+    with open(CONFIGURE["RedDatabase"]["trace_conf"], "r") as trace_conf:
+        data = trace_conf.readlines()
+    for line in data:
+        splitted_line = line.split('=')
+        print(splitted_line)
+        if line.find("max_log_size") != -1 and len(splitted_line) > 1 and not splitted_line[0].startswith("\t#"):
+            CONFIGURE["max_log_size"] = int(splitted_line[1])
+            break
+    data.clear()
 
     # Opening connections
     try:
