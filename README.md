@@ -113,7 +113,7 @@ This is a prometheus exporter for DBMS "Red Database".
 </table>
 
 # Exporter configuration file
-You need to add a configuration json file beside "main.py" file and name it <strong>"exporter_conf"</strong> and fill it with a content. (Field "trace" is reqired)
+You need to add a configuration json file beside "main.py" file and name it <strong>"exporter_conf"</strong> and fill it with a content.
 <br>
 The example of required content is:
 ```
@@ -122,7 +122,7 @@ The example of required content is:
   "login":  "SYSDBA", 
   "password":  "masterkey",
   "RDB_port": 3050,
-  "utilities": "/opt/RedDatabase/bin"
+  "RedDatabase": "/opt/RedDatabase"
   "databases": {
     "[db_nickname]": "localhost:[insert_path_to_database]",
     "[another_db_nickname]": "localhost:[insert_path_to_another_database]"
@@ -130,6 +130,7 @@ The example of required content is:
   "trace": "[insert_path_to_fdbtrace_text]"
 }
 ```
+Field "port" is the port which will be using by exporter.
 
 # Prometheus configuration file
 Prometheus can be configured from either a terminal and a configuration file. The most important settings are from which node prometheus scrapes metrics and time between two scrape queries.
