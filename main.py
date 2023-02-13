@@ -26,7 +26,7 @@ def scrape(db_name) -> str:
     response += scrape_mon_call_stack(cursor, db_name)
     response += scrape_mon_record_stats(cursor, db_name)
     response += scrape_mon_table_stats(cursor, db_name)
-    response += scrape_transactions_params(CONFIGURE["RedDatabase"]["bin"]["gstat"], CONFIGURE["databases"][db_name], db_name)
+    response += scrape_transactions_params(CONFIGURE["RedDatabase"]["gstat"], CONFIGURE["databases"][db_name], db_name)
     response += scrape_db_size(CONFIGURE["databases"][db_name], cursor, db_name)
     response += scrape_trace(CONFIGURE["trace"], db_name)
 
@@ -94,7 +94,6 @@ if __name__ == "__main__":
         data = trace_conf.readlines()
     for line in data:
         splitted_line = line.split('=')
-        print(splitted_line)
         if line.find("max_log_size") != -1 and len(splitted_line) > 1 and not splitted_line[0].startswith("\t#"):
             CONFIGURE["max_log_size"] = int(splitted_line[1])
             break
