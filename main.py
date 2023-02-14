@@ -28,7 +28,7 @@ def scrape(db_name) -> str:
     response += scrape_mon_table_stats(cursor, db_name)
     response += scrape_transactions_params(CONFIGURE["RedDatabase"]["gstat"], CONFIGURE["databases"][db_name], db_name)
     response += scrape_db_size(CONFIGURE["databases"][db_name], cursor, db_name)
-    response += scrape_trace(CONFIGURE["trace"], db_name)
+    response += scrape_trace(db_name)
 
     cursor.close()
     return response
@@ -54,6 +54,7 @@ def run(server_class=HTTPServer, handler_class=Handler):
     server_address = ('', CONFIGURE["port"])
     httpd = server_class(server_address, handler_class)
     try:
+        CONFIGURE["trace_thread"].start()
         httpd.serve_forever()
     except KeyboardInterrupt:
         close_connections()
@@ -74,6 +75,7 @@ if __name__ == "__main__":
         CONFIGURE["RedDatabase"] = {
             "gstat": rdb_path + "bin/gstat",
             "isql": rdb_path + "bin/isql",
+            "rdbtracemgr": rdb_path + "bin/rdbtracemgr",
             "trace_conf": rdb_path + "fbtrace.conf"
         }
         CONFIGURE["mountpoints"] = [disk.mountpoint for disk in psutil.disk_partitions()]
@@ -83,21 +85,20 @@ if __name__ == "__main__":
         CONFIGURE["RedDatabase"] = {
             "gstat": rdb_path + "gstat.exe",
             "isql": rdb_path + "isql.exe",
+            "rdbtracemgr": rdb_path + "rdbtracemgr.exe",
             "trace_conf": rdb_path + "fbtrace.conf"
         }
     else:
         print("This OS is not supported")
         exit(1)
 
-    # Reading trace configuration
-    with open(CONFIGURE["RedDatabase"]["trace_conf"], "r") as trace_conf:
-        data = trace_conf.readlines()
-    for line in data:
-        splitted_line = line.split('=')
-        if line.find("max_log_size") != -1 and len(splitted_line) > 1 and not splitted_line[0].startswith("\t#"):
-            CONFIGURE["max_log_size"] = int(splitted_line[1])
-            break
-    data.clear()
+    # Creating thread of extracting trace procedure
+    CONFIGURE["trace_thread"] = threading.Thread(target=extract_trace, kwargs={
+        "rdbtracemgr": CONFIGURE["RedDatabase"]["rdbtracemgr"],
+        "trace_config": CONFIGURE["RedDatabase"]["trace_conf"],
+        "login": CONFIGURE["login"],
+        "password": CONFIGURE["password"]
+    }, daemon=True)
 
     # Opening connections
     try:

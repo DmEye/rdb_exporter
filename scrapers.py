@@ -1,4 +1,5 @@
 import re
+import threading
 import os.path
 import psutil
 import subprocess
@@ -386,32 +387,61 @@ def scrape_system_metrics(CONFIGURE) -> str:
     return response
 
 
-def scrape_trace(path_to_trace, db_name) -> str:
-    with open(path_to_trace, 'r') as file:
-        data = file.read()
+TRACE_DATA = {"OK": 0, "FAILS": 0, "TIMES": 0, "TIMES_PE": 0}
+lock = threading.Lock()
+
+
+def scrape_trace(db_name) -> str:
+    global TRACE_DATA, lock
+
     metric_name = "trace_statements"
     labels = {
         "database": db_name,
         "type": None
     }
-    fails = 0
-    OK = 0
-    times = 0
-    statements = re.findall(r'(FAILED|UNAUTHORIZED)*\s?(EXECUTE_STATEMENT_FINISH|PREPARE_STATEMENT).*?\s+(\d+) ms', data, re.S)
-    for statement in statements:
-        failed = statement[0] == "FAILED" or statement[0] == "UNAUTHORIZED"
-        if statement[2] != '':
-            times += int(statement[2])
-        if failed:
-            fails += 1
-        elif statement[1] == 'EXECUTE_STATEMENT_FINISH':
-            OK += 1
+    lock.acquire()
+    ok = TRACE_DATA["OK"]
+    fails = TRACE_DATA["FAILS"]
+    times = TRACE_DATA["TIMES"]
+    lock.release()
 
     response = ""
-    labels["type"] = "OK"
-    response += make_prometheus_response(metric_name, labels, OK)
-    labels["type"] = "FAIL"
+    labels["type"] = "ok"
+    response += make_prometheus_response(metric_name, labels, ok)
+    labels["type"] = "fail"
     response += make_prometheus_response(metric_name, labels, fails)
     labels["type"] = "time"
     response += make_prometheus_response(metric_name, labels, times)
     return response
+
+
+def extract_trace(rdbtracemgr, trace_config, login, password):
+    global TRACE_DATA, lock
+
+    cmd_line = f"{rdbtracemgr} -SE service_mgr -START -NAME my_trace -CONFIG {trace_config} -u {login} -p {password}"
+    trace_manager = subprocess.Popen(cmd_line.split(), stdout=subprocess.PIPE)
+    line = trace_manager.stdout.readline().decode("utf-8")  # skip message "trace session started..."
+
+    while True:
+        fails = 0
+        ok = 0
+        times = 0
+        line = trace_manager.stdout.readline().decode("utf-8")
+        if line:
+            statement = re.findall(r'(FAILED|UNAUTHORIZED)*\s?(EXECUTE_STATEMENT_FINISH|PREPARE_STATEMENT)', line, re.S)
+            if statement:
+                statement = statement[0]
+                failed = statement[0] == "FAILED" or statement[0] == "UNAUTHORIZED"
+                if failed:
+                    fails += 1
+                elif statement[1] == 'EXECUTE_STATEMENT_FINISH':
+                    ok += 1
+            time = re.findall(r'.*?\s+(\d+) ms', line, re.S)
+            if time:
+                times += int(time[0][0])
+
+        lock.acquire()
+        TRACE_DATA["OK"] += ok
+        TRACE_DATA["FAILS"] += fails
+        TRACE_DATA["TIMES"] += times
+        lock.release()
