@@ -231,6 +231,178 @@
         "type": "prometheus",
         "uid": "HDm87Qo4z"
       },
+      "description": "Количество успешных и неудачных запросов",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "fail"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ok"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "id": 78,
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "pluginVersion": "9.3.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "HDm87Qo4z"
+          },
+          "editorMode": "code",
+          "expr": "trace_statements{database=\"$database\", instance=\"$instance\", type=\"ok\"}",
+          "legendFormat": "{{type}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "HDm87Qo4z"
+          },
+          "editorMode": "code",
+          "expr": "trace_statements{database=\"$database\", instance=\"$instance\", type=\"fail\"}",
+          "hide": false,
+          "legendFormat": "{{type}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Запросы",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "HDm87Qo4z"
+      },
+      "description": "Если вы видите знак бесконечности, значит сумма времени выполнения запросов оказалась меньше 0 милисекунд",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 84,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.3.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "HDm87Qo4z"
+          },
+          "editorMode": "code",
+          "expr": "(trace_statements{database=\"$database\", type=\"ok\"} + on(database, instance) trace_statements{type=\"fail\"}) / on(database, instance) trace_statements{database=\"$database\", type=\"time_pe\"} * 1000",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Скорость выполнения запросов",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "HDm87Qo4z"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -286,9 +458,9 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 6,
-        "x": 12,
-        "y": 0
+        "w": 12,
+        "x": 0,
+        "y": 7
       },
       "id": 76,
       "options": {
@@ -324,7 +496,7 @@
         "type": "prometheus",
         "uid": "HDm87Qo4z"
       },
-      "description": "Количество успешных и неудачных запросов",
+      "description": "Период времени, по истечению которого закончится место на жёстком диске",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -343,52 +515,22 @@
                 "value": 80
               }
             ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "FAIL"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "dark-red",
-                  "mode": "fixed"
-                }
-              }
-            ]
           },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "OK"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "dark-green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
+          "unit": "h"
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
         "w": 6,
-        "x": 18,
-        "y": 0
+        "x": 12,
+        "y": 7
       },
-      "id": 78,
+      "id": 82,
       "options": {
-        "displayMode": "gradient",
-        "minVizHeight": 10,
-        "minVizWidth": 0,
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -397,7 +539,7 @@
           "fields": "",
           "values": false
         },
-        "showUnfilled": true
+        "textMode": "auto"
       },
       "pluginVersion": "9.3.2",
       "targets": [
@@ -407,26 +549,14 @@
             "uid": "HDm87Qo4z"
           },
           "editorMode": "code",
-          "expr": "trace_statements{database=\"$database\", instance=\"$instance\", type=\"OK\"}",
-          "legendFormat": "{{type}}",
+          "expr": "(system_disk{disks=\"/\", type=\"free\"} / on (instance) (abs(deriv(db_size{database=\"$database\"}[1h])) + 1))",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "HDm87Qo4z"
-          },
-          "editorMode": "code",
-          "expr": "trace_statements{database=\"$database\", instance=\"$instance\", type=\"FAIL\"}",
-          "hide": false,
-          "legendFormat": "{{type}}",
-          "range": true,
-          "refId": "B"
         }
       ],
-      "title": "Запросы",
-      "type": "bargauge"
+      "title": "Осталось времени",
+      "type": "stat"
     },
     {
       "collapsed": true,
@@ -434,7 +564,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 14
       },
       "id": 66,
       "panels": [
@@ -483,7 +613,7 @@
             "h": 8,
             "w": 5,
             "x": 0,
-            "y": 16
+            "y": 15
           },
           "id": 64,
           "options": {
@@ -493,7 +623,8 @@
                 "lastNotNull"
               ],
               "fields": "/^free$/",
-              "values": false
+              "limit": 1,
+              "values": true
             },
             "showThresholdLabels": false,
             "showThresholdMarkers": true
@@ -506,7 +637,7 @@
                 "uid": "HDm87Qo4z"
               },
               "editorMode": "code",
-              "expr": "sum(system_disks{instance=\"$instance\"}) by (type)",
+              "expr": "system_disk{instance=\"$instance\"}",
               "legendFormat": "{{type}}",
               "range": true,
               "refId": "A"
@@ -556,7 +687,7 @@
             "h": 8,
             "w": 5,
             "x": 5,
-            "y": 16
+            "y": 15
           },
           "id": 68,
           "options": {
@@ -593,6 +724,7 @@
             "type": "prometheus",
             "uid": "HDm87Qo4z"
           },
+          "description": "",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -604,18 +736,18 @@
                 "mode": "percentage",
                 "steps": [
                   {
-                    "color": "red"
+                    "color": "semi-dark-green"
                   },
                   {
-                    "color": "orange",
+                    "color": "semi-dark-yellow",
                     "value": 25
                   },
                   {
-                    "color": "yellow",
+                    "color": "semi-dark-orange",
                     "value": 50
                   },
                   {
-                    "color": "green",
+                    "color": "semi-dark-red",
                     "value": 75
                   }
                 ]
@@ -628,7 +760,7 @@
             "h": 8,
             "w": 5,
             "x": 10,
-            "y": 16
+            "y": 15
           },
           "id": 70,
           "options": {
@@ -637,7 +769,7 @@
               "calcs": [
                 "lastNotNull"
               ],
-              "fields": "/^available$/",
+              "fields": "/^used$/",
               "values": false
             },
             "showThresholdLabels": false,
@@ -657,7 +789,7 @@
               "refId": "A"
             }
           ],
-          "title": "RAM (free)",
+          "title": "RAM (используется)",
           "type": "gauge"
         }
       ],
@@ -670,7 +802,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 15
       },
       "id": 56,
       "panels": [
@@ -735,7 +867,7 @@
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 17
+            "y": 16
           },
           "id": 58,
           "options": {
@@ -827,7 +959,7 @@
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 25
+            "y": 24
           },
           "id": 59,
           "options": {
@@ -919,7 +1051,7 @@
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 33
+            "y": 32
           },
           "id": 60,
           "options": {
@@ -1011,7 +1143,7 @@
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 41
+            "y": 40
           },
           "id": 61,
           "options": {
@@ -1103,7 +1235,7 @@
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 49
+            "y": 48
           },
           "id": 62,
           "options": {
@@ -1144,7 +1276,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 16
       },
       "id": 6,
       "panels": [
@@ -1234,7 +1366,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 18
+            "y": 17
           },
           "id": 8,
           "links": [
@@ -1331,7 +1463,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 24
+            "y": 23
           },
           "id": 10,
           "options": {
@@ -1422,7 +1554,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 30
+            "y": 29
           },
           "id": 12,
           "options": {
@@ -1513,7 +1645,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 36
+            "y": 35
           },
           "id": 14,
           "options": {
@@ -1554,7 +1686,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 17
       },
       "id": 36,
       "panels": [
@@ -1619,7 +1751,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 19
+            "y": 26
           },
           "id": 38,
           "options": {
@@ -1710,7 +1842,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 25
+            "y": 32
           },
           "id": 40,
           "options": {
@@ -1801,7 +1933,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 31
+            "y": 38
           },
           "id": 42,
           "options": {
@@ -1892,7 +2024,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 37
+            "y": 44
           },
           "id": 44,
           "options": {
@@ -1933,7 +2065,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 11
+        "y": 18
       },
       "id": 16,
       "panels": [
@@ -1998,7 +2130,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 20
+            "y": 44
           },
           "id": 18,
           "links": [
@@ -2095,7 +2227,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 26
+            "y": 50
           },
           "id": 20,
           "options": {
@@ -2186,7 +2318,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 32
+            "y": 56
           },
           "id": 22,
           "options": {
@@ -2277,7 +2409,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 38
+            "y": 62
           },
           "id": 24,
           "options": {
@@ -2318,7 +2450,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 19
       },
       "id": 26,
       "panels": [
@@ -2383,7 +2515,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 21
+            "y": 20
           },
           "id": 28,
           "options": {
@@ -2474,7 +2606,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 27
+            "y": 26
           },
           "id": 30,
           "options": {
@@ -2565,7 +2697,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 33
+            "y": 32
           },
           "id": 32,
           "options": {
@@ -2656,7 +2788,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 39
+            "y": 38
           },
           "id": 34,
           "options": {
@@ -2697,7 +2829,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 20
       },
       "id": 46,
       "panels": [
@@ -2762,7 +2894,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 22
+            "y": 21
           },
           "id": 48,
           "options": {
@@ -2853,7 +2985,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 28
+            "y": 27
           },
           "id": 50,
           "options": {
@@ -2944,7 +3076,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 34
+            "y": 33
           },
           "id": 52,
           "options": {
@@ -3035,7 +3167,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 40
+            "y": 39
           },
           "id": 54,
           "options": {
@@ -3065,13 +3197,77 @@
           ],
           "title": "Количество marks",
           "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "HDm87Qo4z"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "сек/запрос"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 6,
+            "x": 1,
+            "y": 45
+          },
+          "id": 80,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
+          "pluginVersion": "9.3.2",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "HDm87Qo4z"
+              },
+              "editorMode": "code",
+              "expr": "delta(trace_statements{database=\"$database\", instance=\"$instance\", type=\"time\"}[5m])/1000",
+              "legendFormat": "Запросов/мин",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "type": "stat"
         }
       ],
       "title": "Calls I/O",
       "type": "row"
     }
   ],
-  "refresh": "10s",
+  "refresh": "5s",
   "schemaVersion": 37,
   "style": "dark",
   "tags": [],
@@ -3080,8 +3276,8 @@
       {
         "current": {
           "selected": false,
-          "text": "employee",
-          "value": "employee"
+          "text": "tpcc",
+          "value": "tpcc"
         },
         "datasource": {
           "type": "prometheus",
@@ -3139,8 +3335,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Test",
+  "title": "Main",
   "uid": "sC_EnwT4z",
-  "version": 23,
+  "version": 41,
   "weekStart": ""
 }
