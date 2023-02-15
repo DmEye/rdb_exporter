@@ -403,6 +403,7 @@ def scrape_trace(db_name) -> str:
     ok = TRACE_DATA["OK"]
     fails = TRACE_DATA["FAILS"]
     times = TRACE_DATA["TIMES"]
+    times_pe = TRACE_DATA["TIMES_PE"]
     lock.release()
 
     response = ""
@@ -412,6 +413,8 @@ def scrape_trace(db_name) -> str:
     response += make_prometheus_response(metric_name, labels, fails)
     labels["type"] = "time"
     response += make_prometheus_response(metric_name, labels, times)
+    labels["type"] = "time_pe"
+    response += make_prometheus_response(metric_name, labels, times_pe)
     return response
 
 
@@ -426,6 +429,7 @@ def extract_trace(rdbtracemgr, trace_config, login, password):
         fails = 0
         ok = 0
         times = 0
+        times_pe = 0
         line = trace_manager.stdout.readline().decode("utf-8")
         if line:
             statement = re.findall(r'(FAILED|UNAUTHORIZED)*\s?(EXECUTE_STATEMENT_FINISH|PREPARE_STATEMENT)', line, re.S)
@@ -439,9 +443,12 @@ def extract_trace(rdbtracemgr, trace_config, login, password):
             time = re.findall(r'.*?\s+(\d+) ms', line, re.S)
             if time:
                 times += int(time[0][0])
+                if statement[1] in ("EXECUTE_STATEMENT_FINISH", "PREPARE_STATEMENT", "EXECUTE_STATEMENT_START"):
+                    times_pe += int(time[0][0])
 
         lock.acquire()
         TRACE_DATA["OK"] += ok
         TRACE_DATA["FAILS"] += fails
         TRACE_DATA["TIMES"] += times
+        TRACE_DATA["TIMES_PE"] += times_pe
         lock.release()
