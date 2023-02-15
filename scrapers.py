@@ -431,6 +431,8 @@ def extract_trace(rdbtracemgr, trace_config, login, password):
         times = 0
         times_pe = 0
         line = trace_manager.stdout.readline().decode("utf-8")
+        statement: list
+        time: list
         if line:
             statement = re.findall(r'(FAILED|UNAUTHORIZED)*\s?(EXECUTE_STATEMENT_FINISH|PREPARE_STATEMENT)', line, re.S)
             if statement:
@@ -443,8 +445,9 @@ def extract_trace(rdbtracemgr, trace_config, login, password):
             time = re.findall(r'.*?\s+(\d+) ms', line, re.S)
             if time:
                 times += int(time[0][0])
-                if statement[1] in ("EXECUTE_STATEMENT_FINISH", "PREPARE_STATEMENT", "EXECUTE_STATEMENT_START"):
-                    times_pe += int(time[0][0])
+                if statement:
+                    if statement[1] in ("EXECUTE_STATEMENT_FINISH", "PREPARE_STATEMENT", "EXECUTE_STATEMENT_START"):
+                        times_pe += int(time[0][0])
 
         lock.acquire()
         TRACE_DATA["OK"] += ok

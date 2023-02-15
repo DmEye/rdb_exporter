@@ -43,8 +43,8 @@ class Handler(BaseHTTPRequestHandler):
             response = ""
             response += scrape_system_metrics(CONFIGURE)
             for database in CONFIGURE["databases"]:
-                CONFIGURE["connections"][database].commit()
                 response += scrape(database)
+                CONFIGURE["connections"][database].commit()
             self.wfile.write(response.encode())
         else:
             self.send_response(404)
